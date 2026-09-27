@@ -1,0 +1,3362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src * 'self' data: https: file:; script-src * 'unsafe-inline'; style-src * 'unsafe-inline' https: file:; font-src * https: file:;">
+    <title>Markdown: Rich Preview</title>
+    
+    <link id="highlight-css-light" rel="stylesheet" href="file:///home/achyut/.antigravity-ide/extensions/nur-srijan.markdown-rich-preview-1.3.0-universal/assets/vendor/highlight/styles/github.min.css" disabled>
+    <link id="highlight-css-dark" rel="stylesheet" href="file:///home/achyut/.antigravity-ide/extensions/nur-srijan.markdown-rich-preview-1.3.0-universal/assets/vendor/highlight/styles/github-dark-dimmed.min.css">
+    
+    <link rel="stylesheet" href="file:///home/achyut/.antigravity-ide/extensions/nur-srijan.markdown-rich-preview-1.3.0-universal/assets/vendor/katex/katex.min.css" onerror="console.error('Failed to load KaTeX CSS:', this.href)">
+    <script>
+        // Highlighting is done on the extension side during markdown parsing.
+        // No browser-side initialization of highlight.js is needed.
+
+        // Copy to clipboard function
+        function copyToClipboard(button) {
+            const codeBlock = button.closest('.code-block');
+            const code = codeBlock.querySelector('code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.style.backgroundColor = '#4CAF50';
+                button.style.color = 'white';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.backgroundColor = '';
+                    button.style.color = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+    </script>
+    <style>
+        
+        :root {
+            --preview-bg: #ffffff;
+            --preview-fg: #24292e;
+            --code-bg: #f6f8fa;
+            --code-header-bg: #eaecef;
+            --code-fg: #24292e;
+            --border-color: #eaecef;
+            --link-color: #0366d6;
+            --blockquote-fg: #6a737d;
+            --blockquote-border: #dfe2e5;
+            --table-row-border: #dfe2e5;
+            --table-row-bg: #ffffff;
+            --table-zebra-bg: #f6f8fa;
+            --button-border: #ccc;
+            --button-hover-bg: #e9e9e9;
+        }
+
+        
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --preview-bg: #0d1117;
+                --preview-fg: #c9d1d9;
+                --code-bg: #161b22;
+                --code-header-bg: #21262d69;
+                --code-fg: #c9d1d9;
+                --border-color: #30363d;
+                --link-color: #58a6ff;
+                --blockquote-fg: #8b949e;
+                --blockquote-border: #30363d;
+                --table-row-border: #30363d;
+                --table-row-bg: #0d1117;
+                --table-zebra-bg: #161b22;
+                --button-border: #30363d;
+                --button-hover-bg: #30363d;
+            }
+        }
+        
+
+        body.vscode-light {
+            --preview-bg: var(--vscode-editor-background);
+            --preview-fg: var(--vscode-editor-foreground);
+            --code-bg: var(--vscode-textCodeBlock-background, var(--vscode-editor-background));
+            --code-header-bg: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editor-background));
+            --code-fg: var(--vscode-editor-foreground);
+            --border-color: var(--vscode-editorGroup-border, #eaecef);
+            --link-color: var(--vscode-textLink-foreground, #0366d6);
+            --blockquote-fg: var(--vscode-descriptionForeground, #6a737d);
+            --blockquote-border: var(--vscode-editorGroup-border, #dfe2e5);
+            --table-row-border: var(--vscode-editorGroup-border, #dfe2e5);
+            --table-row-bg: var(--vscode-editor-background, #ffffff);
+            --table-zebra-bg: var(--vscode-list-hoverBackground, #f6f8fa);
+            --button-border: var(--vscode-button-border, #ddd);
+            --button-hover-bg: var(--vscode-button-secondaryHoverBackground, #e9e9e9);
+        }
+
+        body.vscode-dark, body.vscode-high-contrast {
+            --preview-bg: var(--vscode-editor-background);
+            --preview-fg: var(--vscode-editor-foreground);
+            --code-bg: var(--vscode-textCodeBlock-background, var(--vscode-editor-background));
+            --code-header-bg: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editor-background));
+            --code-fg: var(--vscode-editor-foreground);
+            --border-color: var(--vscode-editorGroup-border, #eaecef);
+            --link-color: var(--vscode-textLink-foreground, #0366d6);
+            --blockquote-fg: var(--vscode-descriptionForeground, #6a737d);
+            --blockquote-border: var(--vscode-editorGroup-border, #dfe2e5);
+            --table-row-border: var(--vscode-editorGroup-border, #dfe2e5);
+            --table-row-bg: var(--vscode-editor-background, #ffffff);
+            --table-zebra-bg: var(--vscode-list-hoverBackground, #f6f8fa);
+            --button-border: var(--vscode-button-border, #ddd);
+            --button-hover-bg: var(--vscode-button-secondaryHoverBackground, #e9e9e9);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 0 20px;
+            background-color: var(--preview-bg);
+            color: var(--preview-fg);
+        }
+        img.emoji {
+            height: 1em;
+            width: 1em;
+            margin: 0 .05em 0 .1em;
+            vertical-align: -0.1em;
+            display: inline;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 600;
+            margin-top: 24px;
+            margin-bottom: 16px;
+            line-height: 1.25;
+        }
+        h1 { 
+            font-size: 2em; 
+            border-bottom: 1px solid var(--border-color); 
+            padding-bottom: 0.3em;
+            margin-top: 0.67em 0;
+        }
+        h2 { 
+            font-size: 1.5em; 
+            border-bottom: 1px solid var(--border-color); 
+            padding-bottom: 0.3em;
+            margin-top: 1.5em;
+        }
+        hr {
+            border: 0;
+            border-bottom: 1px solid var(--border-color);
+            margin: 1.5em 0;
+        }
+        h3 { 
+            font-size: 1.25em; 
+            margin-top: 1.25em;
+        }
+        h4 { 
+            font-size: 1em; 
+            margin-top: 1em;
+        }
+        a { 
+            color: var(--link-color); 
+            text-decoration: none; 
+        }
+        a:hover { 
+            text-decoration: underline; 
+        }
+        strong { 
+            font-weight: 600; 
+        }
+        pre {
+            background-color: var(--code-bg);
+            overflow: auto;
+            margin: 0;
+        }
+        code {
+            font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+            padding: 0.2em 0.4em;
+            font-size: 90%;
+        }
+        pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+        .code-block {
+            position: relative;
+            background-color: var(--code-bg);
+            border-radius: 6px;
+            margin: 1em 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 10px;
+            background-color: var(--code-header-bg);
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        .language {
+            color: var(--preview-fg);
+            font-size: 0.9em;
+            font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+        .copy-button {
+            padding: 4px 8px;
+            font-size: 0.9em;
+            color: var(--preview-fg);
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .copy-button:hover {
+            background-color: var(--button-hover-bg);
+            border-color: var(--button-border);
+        }
+        blockquote {
+            margin: 0;
+            padding: 0 1em;
+            color: var(--blockquote-fg);
+            border-left: 0.25em solid var(--blockquote-border);
+        }
+        ul, ol {
+            padding-left: 2em;
+        }
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+            width: 100%;
+            overflow: auto;
+            margin-bottom: 16px;
+        }
+        table th {
+            font-weight: 600;
+        }
+        table th, table td {
+            padding: 6px 13px;
+            border: 1px solid var(--table-row-border);
+        }
+        table tr {
+            background-color: var(--table-row-bg);
+            border-top: 1px solid var(--table-row-border);
+        }
+        table tr:nth-child(2n) {
+            background-color: var(--table-zebra-bg);
+        }
+        img {
+            max-width: 100%;
+            box-sizing: content-box;
+        }
+        /* GitHub-style Alerts */
+        .markdown-alert {
+            padding: 0.25rem 1rem;
+            margin-bottom: 1rem;
+            color: inherit;
+            border-left: 0.25em solid #dfe2e5;
+            border-radius: 6px;
+        }
+        .markdown-alert-title {
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+            line-height: 1;
+        }
+        .markdown-alert-title svg {
+            margin-right: 8px;
+        }
+        .markdown-alert-note { border-left-color: #0969da; }
+        .markdown-alert-note .markdown-alert-title { color: #0969da; }
+        .markdown-alert-tip { border-left-color: #1a7f37; }
+        .markdown-alert-tip .markdown-alert-title { color: #1a7f37; }
+        .markdown-alert-important { border-left-color: #8250df; }
+        .markdown-alert-important .markdown-alert-title { color: #8250df; }
+        .markdown-alert-warning { border-left-color: #9a6700; }
+        .markdown-alert-warning .markdown-alert-title { color: #9a6700; }
+        .markdown-alert-caution { border-left-color: #d1242f; }
+        .markdown-alert-caution .markdown-alert-title { color: #d1242f; }
+
+        /* Footnotes */
+        .footnotes {
+            font-size: 12px;
+            color: var(--blockquote-fg);
+            border-top: 1px solid var(--border-color);
+            margin-top: 24px;
+        }
+        .footnotes ol {
+            padding-left: 16px;
+        }
+        .footnote-backref {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            margin-left: 4px;
+        }
+
+        /* Task Lists */
+        ul.contains-task-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .task-list-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 4px;
+        }
+        .task-list-item input[type="checkbox"] {
+            margin: 0.25em 0.5em 0 0;
+            vertical-align: middle;
+        }
+
+        /* Front Matter */
+        .front-matter {
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            background-color: var(--table-zebra-bg);
+        }
+        .front-matter table {
+            margin-bottom: 0;
+            border: none;
+        }
+        .front-matter table tr {
+            background-color: transparent;
+            border: none;
+        }
+        .front-matter table td {
+            border: none;
+            padding: 4px 8px;
+        }
+        .front-matter-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: var(--blockquote-fg);
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="-campus-recruitment-company-profiles--job-descriptions-catalog">🏢 Campus Recruitment Company Profiles &amp; Job Descriptions Catalog</h1>
+<blockquote>
+<p><strong>Overview</strong>: Clean, structured catalog of <strong>58 Recruiting Companies</strong>, roles, eligibility criteria, CTC packages, application procedures, and attached documents from the <code>jd/</code> directory.</p>
+</blockquote>
+<hr />
+<h2 id="-quick-navigation-table">📋 Quick Navigation Table</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Company</th>
+<th>Role(s)</th>
+<th>Type</th>
+<th>Location</th>
+<th>CTC / Compensation</th>
+<th>Attached Documents (in <code>jd/</code>)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>01</td>
+<td><a href="#01-boeing-india">Boeing India</a></td>
+<td><code>Supplier Development &amp; Growth Traniee,Digi...</code></td>
+<td>Apprenticeship</td>
+<td>Bengaluru,</td>
+<td><strong>₹ 938000 per Annum</strong></td>
+<td>10 file(s)</td>
+</tr>
+<tr>
+<td>02</td>
+<td><a href="#02-commonwealth-bank-of-australia">Commonwealth Bank of Australia</a></td>
+<td><code>Remote Apprenticeship</code></td>
+<td>Apprenticeship</td>
+<td>Remote (work-from-home)</td>
+<td><strong>₹ 15000 per Month</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>03</td>
+<td><a href="#03-oracle-ofss">ORACLE OFSS</a></td>
+<td><code>Project Intern</code></td>
+<td>Internship</td>
+<td>Bangalore, Mumbai, Pune or Chennai</td>
+<td><strong>₹ 60000 per Month</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>04</td>
+<td><a href="#04-epicor">Epicor</a></td>
+<td><code>Intern</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 1400000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>05</td>
+<td><a href="#05-zensar-technologies">Zensar Technologies</a></td>
+<td><code>AI Engineer</code></td>
+<td>Full Time</td>
+<td>Pune, Chennai, Hyderabad, Bangalore</td>
+<td><strong>₹ 600000 - ₹ 1000000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>06</td>
+<td><a href="#06-infosys">Infosys</a></td>
+<td><code>Specialist Programmer (Trainee)/Digital Sp...</code></td>
+<td>Full Time</td>
+<td>PAN INDIA</td>
+<td><strong>₹ 625000 - ₹ 2100000 per Annum</strong></td>
+<td>3 file(s)</td>
+</tr>
+<tr>
+<td>07</td>
+<td><a href="#07-west-pharmaceutical-services-inc">West Pharmaceutical Services, Inc</a></td>
+<td><code>Graduate Trainee, R&amp;D</code></td>
+<td>Full Time</td>
+<td>Bangalore ( Kadubeesanahalli)</td>
+<td><strong>₹ 990000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>08</td>
+<td><a href="#08-te-connectivity">TE Connectivity</a></td>
+<td><code>Electronics R&amp;D,Sensors lab,- Mechanical R...</code></td>
+<td>Full Time</td>
+<td>Whitefield, Bangalore</td>
+<td><strong>₹ 629000 - ₹ 915000 per Annum</strong></td>
+<td>5 file(s)</td>
+</tr>
+<tr>
+<td>09</td>
+<td><a href="#09-celonis-orbit-india">Celonis(Orbit India)</a></td>
+<td><code>Associate Value Engineer</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 1300000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>10</td>
+<td><a href="#10-kaar-technologies">Kaar Technologies</a></td>
+<td><code>Tech Lieutenant</code></td>
+<td>Full Time</td>
+<td>Chennai</td>
+<td><strong>₹ 850000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>11</td>
+<td><a href="#11-golgix">GOLGIX</a></td>
+<td><code>ML Engineer,Full Stack Engineer</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 500000 - ₹ 1000000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>12</td>
+<td><a href="#12-neoveda-technologies-private-limited">Neoveda Technologies Private Limited</a></td>
+<td><code>Graduate Software Engineer (GSE)</code></td>
+<td>Full Time</td>
+<td>Dehradun, Uttarakhand</td>
+<td><strong>₹ 500000 - ₹ 800000 per Annum</strong></td>
+<td>2 file(s)</td>
+</tr>
+<tr>
+<td>13</td>
+<td><a href="#13-pivotalassociates">pivotalassociates</a></td>
+<td><code>Business Development,Client Relationships,...</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 900000 - ₹ 1200000 per Annum</strong></td>
+<td>5 file(s)</td>
+</tr>
+<tr>
+<td>14</td>
+<td><a href="#14-london-stock-exchange-group-lseg">London Stock Exchange Group - LSEG</a></td>
+<td><code>Product Engineering,Service Engineering,Qu...</code></td>
+<td>Full Time</td>
+<td>Bengaluru &amp; Hyderabad</td>
+<td><strong>₹ 1210845 per Annum</strong></td>
+<td>2 file(s)</td>
+</tr>
+<tr>
+<td>15</td>
+<td><a href="#15-zeai-soft">ZeAI Soft</a></td>
+<td><code>Artificial Intelligence, Machine Learning,...</code></td>
+<td>Full Time</td>
+<td>Chennai</td>
+<td><strong>₹ 500000 - ₹ 800000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>16</td>
+<td><a href="#16-moveinsync">MoveinSync</a></td>
+<td><code>Software Development Intern (Frontend)</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 1000000 - ₹ 1200000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>17</td>
+<td><a href="#17-peoplehum-avniro-groups">PeopleHum (Avniro Groups)</a></td>
+<td><code>Agentic AI Java Developer, UI Developer fo...</code></td>
+<td>Full Time</td>
+<td>Mumbai</td>
+<td><strong>₹ 540000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>18</td>
+<td><a href="#18-recruit-crm">Recruit CRM</a></td>
+<td><code>Trainee Software Engineer</code></td>
+<td>Full Time</td>
+<td>Fully Remote</td>
+<td><strong>₹ 900000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>19</td>
+<td><a href="#19-opentext">OpenText</a></td>
+<td><code>Internship – AI/ML/DS Developer</code></td>
+<td>Full Time</td>
+<td>Hyderabad or Bangalore</td>
+<td><strong>₹ 1500000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>20</td>
+<td><a href="#20-mu-sigma">Mu Sigma</a></td>
+<td><code>Trainee Decision Scientist-1</code></td>
+<td>Full Time</td>
+<td>PAN INDIA</td>
+<td><strong>₹ 500000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>21</td>
+<td><a href="#21-fractal-ai">Fractal ai</a></td>
+<td><code>Data Science,Data Engineer,Data Analytics</code></td>
+<td>Full Time</td>
+<td>Mumbai/Bengaluru/Gurgaon/Chennai/Pune/Noida</td>
+<td><strong>₹ 700000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>22</td>
+<td><a href="#22-stylumia">Stylumia</a></td>
+<td><code>Machine Learning Engineer</code></td>
+<td>Full Time</td>
+<td>Bengaluru, Karnataka (On-site)</td>
+<td><strong>₹ 1000000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>23</td>
+<td><a href="#23-accorian">Accorian</a></td>
+<td><code>Penetration Testing</code></td>
+<td>Full Time</td>
+<td>Bangalore ( Hydrid)</td>
+<td><strong>₹ 900000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>24</td>
+<td><a href="#24-data-grokr">Data Grokr</a></td>
+<td><code>Software Development Intern</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 600000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>25</td>
+<td><a href="#25-stemx-india">STEMx India</a></td>
+<td><code>R&amp;D Engineer, Business Development (BDM) I...</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 400000 - ₹ 600000 per Annum</strong></td>
+<td>4 file(s)</td>
+</tr>
+<tr>
+<td>26</td>
+<td><a href="#26-eon-exea">EON EXEA</a></td>
+<td><code>Polymath Innovae Fellowship</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 2100000 per Annum</strong></td>
+<td>2 file(s)</td>
+</tr>
+<tr>
+<td>27</td>
+<td><a href="#27-accenture">Accenture</a></td>
+<td><code>Associate Software Engineer,Advanced Assoc...</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 450000 - ₹ 650000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>28</td>
+<td><a href="#28-jones-lang-lasalle-jll">Jones Lang Lasalle (JLL)</a></td>
+<td><code>Software Engineer</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 900000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>29</td>
+<td><a href="#29-zf-group">ZF Group</a></td>
+<td><code>Web Development Intern,Research Intern – L...</code></td>
+<td>Full Time</td>
+<td>Hyderabad</td>
+<td><strong>₹ 900000 per Annum</strong></td>
+<td>4 file(s)</td>
+</tr>
+<tr>
+<td>30</td>
+<td><a href="#30-mathco">MathCo</a></td>
+<td><code>AI-Analyst</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 600000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>31</td>
+<td><a href="#31-super-money-a-flipkart-company">super.money (a Flipkart Company)</a></td>
+<td><code>SDE</code></td>
+<td>Full Time</td>
+<td>PAN INDIA</td>
+<td><strong>₹ 1800000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>32</td>
+<td><a href="#32-net-connect-global">Net Connect Global</a></td>
+<td><code>Customer Success Executive,Growth Associat...</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 600000 per Annum</strong></td>
+<td>3 file(s)</td>
+</tr>
+<tr>
+<td>33</td>
+<td><a href="#33-aadhar-housing-finance-ltd">Aadhar Housing Finance Ltd</a></td>
+<td><code>Data Scientist, Business Analyst &amp; Data En...</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 900000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>34</td>
+<td><a href="#34-nutanix">Nutanix</a></td>
+<td><code>SRE Intern</code></td>
+<td>Full Time</td>
+<td>Bangalore/Pune</td>
+<td><strong>₹ 2035000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>35</td>
+<td><a href="#35-epsilon">Epsilon</a></td>
+<td><code>Associate Software Engineer,Associate Data...</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 800000 per Annum</strong></td>
+<td>2 file(s)</td>
+</tr>
+<tr>
+<td>36</td>
+<td><a href="#36-zensar-technologies">Zensar Technologies</a></td>
+<td><code>Intern</code></td>
+<td>Full Time</td>
+<td>Pune</td>
+<td><strong>₹ 1000000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>37</td>
+<td><a href="#37-hourglass-research">Hourglass Research</a></td>
+<td><code>Patent Associates</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 750000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>38</td>
+<td><a href="#38-center-of-data-for-public-good-cdpg">Center of Data for Public Good (CDPG)</a></td>
+<td><code>AI and Mobility Internships</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 600000 - ₹ 800000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>39</td>
+<td><a href="#39-codeyoung">Codeyoung</a></td>
+<td><code>International Sales Specialist (ISS)</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 836000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>40</td>
+<td><a href="#40-opentext">OpenText</a></td>
+<td><code>Intern</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 1550000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>41</td>
+<td><a href="#41-living-waters-intelligence">Living Waters Intelligence</a></td>
+<td><code>Content Developer</code></td>
+<td>Full Time</td>
+<td>WFH</td>
+<td><strong>₹ 500000 - ₹ 700000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>42</td>
+<td><a href="#42-infosys">Infosys</a></td>
+<td><code>Specialist Programmer (Trainee)/Digital Sp...</code></td>
+<td>Full Time</td>
+<td>PAN INDIA</td>
+<td><strong>₹ 700000 per Annum</strong></td>
+<td>3 file(s)</td>
+</tr>
+<tr>
+<td>43</td>
+<td><a href="#43-agile-robots">Agile Robots</a></td>
+<td><code>Technical Interns</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 600000 - ₹ 800000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>44</td>
+<td><a href="#44-prodapt">Prodapt</a></td>
+<td><code>FORWARD DEPLOYED ENGINEER</code></td>
+<td>Full Time</td>
+<td>PAN INDIA</td>
+<td><strong>₹ 600000 - ₹ 1500000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>45</td>
+<td><a href="#45-prodoc-ai">Prodoc.Ai</a></td>
+<td><code>Technical Support Intern</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 500000 - ₹ 700000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>46</td>
+<td><a href="#46-axcess-io">axcess.io</a></td>
+<td><code>Cloud Developers</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 500000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>47</td>
+<td><a href="#47-xinquiry-leads-software-private-limited">Xinquiry Leads Software Private Limited</a></td>
+<td><code>React Role</code></td>
+<td>Full Time</td>
+<td>Bangalore/Delhi</td>
+<td><strong>₹ 400000 - ₹ 600000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>48</td>
+<td><a href="#48-orionedge-ai">OrionEdge.AI</a></td>
+<td><code>Developer role</code></td>
+<td>Full Time</td>
+<td>Bengaluru- HSR Layout</td>
+<td><strong>₹ 650000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>49</td>
+<td><a href="#49-falabella-india">Falabella India</a></td>
+<td><code>Software Engineer Intern</code></td>
+<td>Full Time</td>
+<td>Bengaluru</td>
+<td><strong>₹ 1000000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>50</td>
+<td><a href="#50-ampcus-cyber-india-private-limited">Ampcus Cyber India Private Limited</a></td>
+<td><code>Intern</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 600000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>51</td>
+<td><a href="#51-infosys">Infosys</a></td>
+<td><code>Systems Engineer (Trainee)</code></td>
+<td>Full Time</td>
+<td>PAN INDIA</td>
+<td><strong>₹ 360000 per Annum</strong></td>
+<td>3 file(s)</td>
+</tr>
+<tr>
+<td>52</td>
+<td><a href="#52-target-india">Target India</a></td>
+<td><code>Apprentice Tech</code></td>
+<td>Apprenticeship</td>
+<td>Bangalore</td>
+<td><strong>₹ 900000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>53</td>
+<td><a href="#53-agratas-a-tata-enterprose">Agratas ( A TATA Enterprose )</a></td>
+<td><code>Intern</code></td>
+<td>Full Time</td>
+<td>Bengaluru</td>
+<td><strong>₹ 1100000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>54</td>
+<td><a href="#54-virtusa">Virtusa</a></td>
+<td><code>Regular coders,Power coders</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 500000 - ₹ 650000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>55</td>
+<td><a href="#55-ltm">LTM</a></td>
+<td><code>Graduate Engineer Trainee</code></td>
+<td>Full Time</td>
+<td>PAN INDIA</td>
+<td><strong>₹ 405233 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+<tr>
+<td>56</td>
+<td><a href="#56-quick-hyre">QUICK HYRE</a></td>
+<td><code>AI/ML &amp; Robotics Data Annotator</code></td>
+<td>Full Time</td>
+<td>Work From Home</td>
+<td><strong>₹ 40000 per Month</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>57</td>
+<td><a href="#57-akshara-enterprises">Akshara Enterprises</a></td>
+<td><code>Business Analytics and Data Analytics</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 540000 per Annum</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>58</td>
+<td><a href="#58-recruiterflow">Recruiterflow</a></td>
+<td><code>Intern</code></td>
+<td>Full Time</td>
+<td>Bangalore</td>
+<td><strong>₹ 900000 per Annum</strong></td>
+<td>1 file(s)</td>
+</tr>
+</tbody></table>
+<hr />
+<h2 id="01-boeing-india"><a id="01-boeing-india"></a>01. Boeing India</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Supplier Development &amp; Growth Traniee,Digital Engineering Traniee- PLM,Software apprentice Traniee,Java Fullstack Developer,Business Integration Trai,nee</code></li>
+<li><strong>Position Type</strong>: <code>Apprenticeship</code></li>
+<li><strong>Job Location</strong>: <code>Bengaluru,</code></li>
+<li><strong>Official Website</strong>: <a href="https://www.boeing.co.in/">https://www.boeing.co.in/</a></li>
+</ul>
+<h3 id="-opening-overview">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering Logistics &amp; Supply Chain</li>
+<li><strong>Job Profile CTC</strong>: ₹ 938000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details">📄 Job Description &amp; Drive Details</h3>
+<p>We are pleased to inform you that Boeing India will be visiting NMIT for an on-campus recruitment drive.</p>
+<p><strong>Tentative Drive Dates: 7th &amp; 8th April 2026</strong></p>
+<p><strong>Eligible Batch: BE 2027 Passout</strong></p>
+<p>1 Year Apprenticeship Stipend : 32,000 per month(3.84 LPA)</p>
+<p>Based on conversation CTC Offered: 9.38 LPA</p>
+<p><strong>Eligibility Criteria:</strong></p>
+<p>• Minimum 70% throughout academics( 10th,12th/Diploma and UG)
+• No history of backlogs</p>
+<h3 id="-attached-documents-click-to-open">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📘 <a href="./jd/Role%204%20Java%20Fullstack%20Developer.docx">Role 4 Java Fullstack Developer.docx</a></li>
+<li>📘 <a href="./jd/Role%209%20Electrical%20design%20Engineer%20trainee.docx">Role 9 Electrical design Engineer trainee.docx</a></li>
+<li>📘 <a href="./jd/Role%203%20Business%20Integration%20Trainee.docx">Role 3 Business Integration Trainee.docx</a></li>
+<li>📘 <a href="./jd/Role%201%20Software%20apprentice%20Traniee.docx">Role 1 Software apprentice Traniee.docx</a></li>
+<li>📘 <a href="./jd/Role%208%20Supplier%20Development%20Growth%20Intern.docx">Role 8 Supplier Development Growth Intern.docx</a></li>
+<li>📘 <a href="./jd/Role%205%20Systems%20Engineering%20Traniee.docx">Role 5 Systems Engineering Traniee.docx</a></li>
+<li>📘 <a href="./jd/Role%207%20Numerical%20Control%20Programming%20Traniee%20%281%29.docx">Role 7 Numerical Control Programming Traniee (1).docx</a></li>
+<li>📕 <a href="./jd/Apprenticeship_Comp.pdf">Apprenticeship_Comp.pdf</a></li>
+<li>📘 <a href="./jd/Role%202%20Software%20Traniee.docx">Role 2 Software Traniee.docx</a></li>
+<li>📘 <a href="./jd/Role%206%20Digital_Engineering_Apprentice_JD%20%286D%29.docx">Role 6 Digital_Engineering_Apprentice_JD (6D).docx</a></li>
+</ul>
+<hr />
+<h2 id="02-commonwealth-bank-of-australia"><a id="02-commonwealth-bank-of-australia"></a>02. Commonwealth Bank of Australia</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Remote Apprenticeship</code></li>
+<li><strong>Position Type</strong>: <code>Apprenticeship</code></li>
+<li><strong>Job Location</strong>: <code>Remote (work-from-home)</code></li>
+</ul>
+<h3 id="-opening-overview-1">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering Others</li>
+<li><strong>Job Profile CTC</strong>: ₹ 15000 per Month</li>
+</ul>
+<h3 id="-job-description--drive-details-1">📄 Job Description &amp; Drive Details</h3>
+<p>As discussed, I am writing to inform you about an exciting apprenticeship opportunity for your final-year students (2027 pass-out batch) under the Apprenticeship Act, 1961.</p>
+<p>Program Highlights:</p>
+<p>• Position: Remote Apprenticeship
+• Eligibility: Final-year students (2027 pass-out only)
+• Duration: July to December
+• Stipend: 15,000 per month (paid)
+• Mode: Remote (work-from-home)
+• Education - Btech
+• Experience: Hands-on exposure to real-world industry practices
+• PPO Opportunity: High-performing candidates may receive a Pre-Placement Offer (PPO) based on their performance</p>
+<p>This program is designed to help students:</p>
+<p>• Gain practical industry experience while completing their studies
+• Apply academic knowledge in a professional environment
+• Enhance their employability and skill set</p>
+<h3 id="-attached-documents-click-to-open-1">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Brochure_Apprenticeship%20%284%29.pdf">Brochure_Apprenticeship (4).pdf</a></li>
+</ul>
+<hr />
+<h2 id="03-oracle-ofss"><a id="03-oracle-ofss"></a>03. ORACLE OFSS</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Project Intern</code></li>
+<li><strong>Position Type</strong>: <code>Internship</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore, Mumbai, Pune or Chennai</code></li>
+</ul>
+<h3 id="-opening-overview-2">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Project Management</li>
+<li><strong>Job Profile CTC</strong>: ₹ 60000 per Month</li>
+</ul>
+<h3 id="-job-description--drive-details-2">📄 Job Description &amp; Drive Details</h3>
+<p>Oracle Financial Services Software Limited (OFSS) is a subsidiary of Oracle Corporation. It is involved in financial and insurance technology. Oracle Financial Services enables financial institutions to solve the challenges of building customer understanding and competitive advantage through cost-effective solutions while adhering to the stringent demands of a dynamic regulatory environment. It comprises of the world's most contemporary banking applications and a technology footprint that addresses complex IT and business requirements.</p>
+<p>Website: <a href="https://www.oracle.com/in/industries/financial-services/">https://www.oracle.com/in/industries/financial-services/</a></p>
+<p>As we kick off our upcoming campus season, we are excited to work with your institute and select the most talented candidates.</p>
+<p>Please confirm the timelines to conduct the following process listed below and share the qualified candidate database in the attached file at the earliest and review the job description for further information.</p>
+<p>Campus Process</p>
+<p>Proposed Date &amp; Time</p>
+<p>Online Assessment Test (2 Hours)</p>
+<p>10th Nov 5:00 PM</p>
+<p>Preplacement Talk</p>
+<p>11th Nov 5:00 PM</p>
+<p>Personal Interviews</p>
+<p>12th Nov 9.30 AM onwards</p>
+<p>Oracle POC</p>
+<p>Priyanka Gupta - 9773580888</p>
+<p>Organization</p>
+<p>OFSS</p>
+<p>Job Profile</p>
+<p>Project Intern</p>
+<p>Job Location</p>
+<p>Bangalore, Mumbai, Pune or Chennai</p>
+<p>Internship Duration</p>
+<p>2 Months</p>
+<p><strong>Stipend per month</strong></p>
+<p>INR 60,000 per month</p>
+<p>Eligibility</p>
+<p>B. Tech with specialization in CSE/ECE/EEE/IT</p>
+<p>Masters or Research Students are not eligible</p>
+<p>CGPA</p>
+<p>7/10 and above or percentage equivalent to 70% and above</p>
+<p>Relocation Assistance</p>
+<p>Relocation assistance is provided as per the policy</p>
+<p>Notes</p>
+<p>No active backlogs (any semester)</p>
+<p>Only candidates eligible to work in India (by citizenship, OCI status, or nationality status permitted for work in India) may apply for this position.</p>
+<p>Oracle does not offer or support any work visa / sponsorship for this position.</p>
+<hr />
+<h2 id="04-epicor"><a id="04-epicor"></a>04. Epicor</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Intern</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-3">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 1400000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-3">📄 Job Description &amp; Drive Details</h3>
+<p>Allowed branches</p>
+<p>• Computer Science (CS)
+• Information Science &amp; Engineering
+• Artificial Intelligence ( ML &amp; DS)
+• Electronics &amp; Communication (ECE)</p>
+<p>Academic Criteria:</p>
+<p>• Minimum 80% and above in:
+• 10th grade
+• 12th grade
+• All semesters of the current degree
+• The stipend will be 50K CTC, with a conversion to 14 LPA.</p>
+<hr />
+<h2 id="05-zensar-technologies"><a id="05-zensar-technologies"></a>05. Zensar Technologies</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>AI Engineer</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Pune, Chennai, Hyderabad, Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-4">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering</li>
+<li><strong>Job Profile CTC</strong>: ₹ 600000 - ₹ 1000000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-4">📄 Job Description &amp; Drive Details</h3>
+<p>Greetings from Zensar Technologies!</p>
+<p>As discussed, we are pleased to inform you that we are considering B.E./B. Tech students graduating in June/July 2027 from your esteemed institution for our upcoming campus hiring program.</p>
+<p>As an initial step in our campus recruitment process, we would like to schedule a Pre-Placement Talk (PPT). To help us plan the session effectively, we request you to kindly share the approximate number of eligible and interested students who would like to participate in the campus drive.</p>
+<p>About Zensar Technologies</p>
+<p>Zensar Technologies is a leading global digital solutions and technology services company and part of the RPG Group, headquartered in Pune, India. We specialize in digital engineering, cloud, data, and AI-led transformation services, helping enterprises accelerate innovation and achieve business outcomes.</p>
+<p>• Revenue: ~USD 624 million (FY25FY26)
+• Employee Strength: 10,000+ professionals globally
+• Global Presence: Operations across 16+ countries with 30+ offices worldwide</p>
+<p>Zensar partners with global enterprises to drive innovation, enhance customer experiences, and enable digital transformation at scale.</p>
+<p>Internship Opportunity</p>
+<p>Role: Intern</p>
+<p>Work Location: Pune, Chennai, Hyderabad, Bangalore</p>
+<p>Work Mode: Work from Office</p>
+<p>Joining Preference: Immediate Availability for Internship</p>
+<p>Internship Benefits</p>
+<p>• Selected students will receive a paid internship with a stipend of 25,000 per month.
+• Upon successful completion of the internship and based on performance, students may be considered for a full-time employment opportunity.
+• Eligible candidates may be offered the role of AI Engineer with a compensation package ranging from 6 LPA to 10 LPA.</p>
+<p>Academic Eligibility</p>
+<p>Qualification</p>
+<p>• B.E. / B.Tech.</p>
+<p>Eligible Branches</p>
+<p>• Computer Science Engineering (CSE)
+• Information Technology (IT)
+• Artificial Intelligence &amp; Machine Learning (AIML)
+• Artificial Intelligence &amp; Data Science (AIDS)
+• Data Science and related specializations</p>
+<p>Student Eligibility</p>
+<p>• Students currently in the 7th semester of their engineering program.
+• Expected graduation in June/July 2027.
+• Basic programming knowledge in languages such as Python, Java, or JavaScript.
+• Understanding of data structures, algorithms, system design concepts, and coding fundamentals.
+• Strong analytical and problem-solving skills.
+• Curiosity, adaptability, and eagerness to learn in an agile work environment.
+• Willingness to work from any Zensar office location as per business requirements.</p>
+<p>Academic Criteria</p>
+<p>• SSC (10th): 75% and above
+• HSC (12th): 70% and above
+• Graduation: Minimum 6.5 CGPA (up to the 6th semester)</p>
+<p>Additional Requirements</p>
+<p>• Willingness to relocate, if required.
+• Readiness to work full-time from the assigned office location.
+• Commitment to working from office on all working days.</p>
+<hr />
+<h2 id="06-infosys"><a id="06-infosys"></a>06. Infosys</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Specialist Programmer (Trainee)/Digital Specialist Engineer (Trainee)</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>PAN INDIA</code></li>
+<li><strong>Official Website</strong>: <a href="http://infosys.com">http://infosys.com</a></li>
+</ul>
+<h3 id="-opening-overview-5">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering</li>
+<li><strong>Job Profile CTC</strong>: ₹ 625000 - ₹ 2100000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-5">📄 Job Description &amp; Drive Details</h3>
+<p>Warm greetings from Infosys.</p>
+<p>As a global leader in next-generation AI-first digital services and consulting, Infosys is dedicated to amplifying human potential and creating transformative opportunities for people, businesses, and communities. With a workforce of 320,000+ professionals, we enable 1,900+ clients across 59 countries to navigate their AI and digital transformation journeys through an AI-powered core, agile digital solutions at scale, and our commitment to continuous learning.</p>
+<p>We are delighted to invite your esteemed institution to participate in the Infosys Campus Recruitment Program for the Class of 2027. Through this initiative, we seek to identify exceptional talent for our Specialist Programmer (Trainee) and Digital Specialist Engineer (Trainee) roles.</p>
+<p>Our Revised Compensation Structure:</p>
+<p>• Specialist Programmer L3 (Trainee): INR 21 LPA
+• Specialist Programmer L2 (Trainee): INR 16 LPA,
+• Specialist Programmer L1 (Trainee): INR 10 LPA + INR 1 Lakh Joining Bonus
+• Digital Specialist Engineer (Trainee): INR 6.25 LPA + INR 75,000 Joining Bonus</p>
+<p>Recruitment Format: This year's campus recruitment program will be conducted on-campus through an in-person evaluation process designed to identify candidates whose technical acumen and behavioral competencies align with our AI-driven organizational vision.</p>
+<p>Assessment Framework:</p>
+<p>• Format: A three-hour evaluation comprising programming tasks of varying levels of difficulty.</p>
+<p>Eligibility Parameters:</p>
+<p>Qualifying Programs: BE, BTech, ME, MTech, MCA, MSc (5-year Integrated), MSc (Mathematics)</p>
+<p>Eligible Specializations:</p>
+<p>• Computer Science Engineering
+• Information Science &amp; Engineering
+• Data Science / Artificial Intelligence &amp; Machine Learning
+• Information Technology
+• Cybersecurity
+• Software Engineering
+• Electronics and Communication Engineering
+• Electronics and Electrical Engineering
+• Allied disciplines within Computer Science and Information Technology domains</p>
+<p>Academic Requirements: As per attached criteria Graduating Batch: 2027</p>
+<p>Action Required:</p>
+<p>Please review the attached Eligibility Criteria document and submit the completed Student Details Sheet by 6 July 2026, 10 AM. Nominated candidates will receive email invitations to complete the mandatory Infosys Application Form, which serves as the gateway to our evaluation process.</p>
+<p>Critical Guidelines:</p>
+<p>• Personal email addresses only; institutional domain addresses cannot be processed
+• Our system-driven protocols necessitate strict adherence to submission deadlines
+• Post-deadline modifications or additions to nomination lists cannot be accommodated</p>
+<h3 id="-attached-documents-click-to-open-2">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Infosys%20Campus%20Recruitment%20Program_Elgibility%20Criteria.pdf">Infosys Campus Recruitment Program_Elgibility Criteria.pdf</a></li>
+<li>📕 <a href="./jd/IMPORTANT%20INSTRUCTIONS%20FOR%20CANDIDATES.pdf">IMPORTANT INSTRUCTIONS FOR CANDIDATES.pdf</a></li>
+<li>📕 <a href="./jd/Infosys_Assessment_Guidelines.pdf">Infosys_Assessment_Guidelines.pdf</a></li>
+</ul>
+<hr />
+<h2 id="07-west-pharmaceutical-services-inc"><a id="07-west-pharmaceutical-services-inc"></a>07. West Pharmaceutical Services, Inc</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Graduate Trainee, R&amp;D</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore ( Kadubeesanahalli)</code></li>
+</ul>
+<h3 id="-opening-overview-6">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering</li>
+<li><strong>Job Profile CTC</strong>: ₹ 990000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-6">📄 Job Description &amp; Drive Details</h3>
+<p>Job Title</p>
+<p>Graduate Trainee, R&amp;D, Robotics and Automation</p>
+<p>Qualification : BE/Btech ECE ,CSE ,AI &amp; ML Engineering , Data Science Engineering</p>
+<p>Job Location</p>
+<p>Bangalore ( Kadubeesanahalli)</p>
+<p>Annual CTC</p>
+<p>During Training/Internship Period: 6months Internship.</p>
+<p><strong>Stipend -40k/month(Tax applicable) .</strong></p>
+<p>After Completion of training &amp; confirmation: INR 9,90,000 LPA (9LPA +10% Bonus) (Tax applicable ).</p>
+<p>Training Bonus:</p>
+<p>INR 80,000 to be released in two parts .</p>
+<p>a) INR 20,000 in the first month payroll ,post conversion.</p>
+<p>b) INR 60,000 on completion of probation period Retention</p>
+<p>Bonus will be released only if the Employee / Trainee/Intern is on rolls of the company and is not on notice period .</p>
+<p>**Shared accommodation for one month with food for outstation candidates.
+**Pool transportation</p>
+<p>Service Agreement</p>
+<p>Duration 18 months</p>
+<p>Amount-5,00,000 INR</p>
+<p>All the shortlisted Trainees/Interns from the day one of joining will be covered under a Claw back period of 18 months with Payback amount of INR 500,000.</p>
+<p>• If the employment cessation occurs any time but before completion of 12 months then the Trainee/ Intern will have to reimburse the Company complete Pay back amount .
+• If the employment cessation occurs any time but after completion of 12 months and before completion of 18 months then the Trainee /Intern will have to reimburse the Company INR 350,000 Pay back amount .</p>
+<p><strong>Eligibility Criteria (Percentage/CGPA in 10th, 12th , UG)</strong></p>
+<p>70% aggregate throughout academics mandatory ,No Backlogs (Mandatory)</p>
+<p>Process Of Recruitment :</p>
+<p>Aptitude Test</p>
+<p>Group Discussion</p>
+<p>Technical Round</p>
+<p>Manager/Director Round</p>
+<p>HR Round</p>
+<p>Service Agreement:---</p>
+<p>Duration 18 months</p>
+<p>Amount-5,00,000 INR</p>
+<p>All the shortlisted Trainees/Interns from the day one of joining will be covered under a Claw back period of 18 months with Payback amount of INR 500,000.</p>
+<p>• If the employment cessation occurs any time but before completion of 12 months then the Trainee/ Intern will have to reimburse the Company complete Pay back amount .
+• If the employment cessation occurs any time but after completion of 12 months and before completion of 18 months then the Trainee /Intern will have to reimburse the Company INR 350,000 Pay back amount .</p>
+<h3 id="-attached-documents-click-to-open-3">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Graduate%20Trainee%2C%20Intern%20%2C%20R%26D%2C%20Robotics%20%26%20Automation%20.pdf">Graduate Trainee, Intern , R&amp;D, Robotics &amp; Automation .pdf</a></li>
+</ul>
+<hr />
+<h2 id="08-te-connectivity"><a id="08-te-connectivity"></a>08. TE Connectivity</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Electronics R&amp;D,Sensors lab,- Mechanical R&amp;D,Digital Solutions,Test Engineer,</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Whitefield, Bangalore</code></li>
+<li><strong>Official Website</strong>: <a href="https://www.te.com/">https://www.te.com/</a></li>
+</ul>
+<h3 id="-opening-overview-7">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering Others</li>
+<li><strong>Job Profile CTC</strong>: ₹ 629000 - ₹ 915000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-7">📄 Job Description &amp; Drive Details</h3>
+<p>No. of vacancies: 8 (JDs are enclosed for reference)</p>
+<p>• Role 1- Sensors lab: 3 - Eligible branches are EEE+ ECE + VLSI
+• Role 2- Mechanical R&amp;D: 2 - Eligible branch - Mechanical
+• Role 3- Digital Solutions: 1 - Eligible branches are - CSE +ISE+ AI-ML+ AI-DS + CS-BS
+• Role 4- Test Engineer: 1 - Eligible branches are - ECE + VLSI
+• Role 5 - Electronics R&amp;D: 1 - Eligible branches are EEE+ ECE + VLSI</p>
+<p>One student can apply for ONE ROLE only</p>
+<p>Post conversion compensation, if selected for FTE</p>
+<p>B.E/B.Tech (Mechanical, Electrical,Electronics): INR 6.29LPA + INR 50,000 Joining Bonus</p>
+<p>B.E/B.Tech (Computer Science): INR 9.15LPA + INR 50,000 Joining Bonus</p>
+<p>Hire category: Internship</p>
+<p>Tenure: 6 months</p>
+<p>Onboarding timeline: Oct26 onwards</p>
+<p>Graduation year: 2027 (With no active backlogs)</p>
+<p>Internship Stipend: INR 30,000/month</p>
+<p>Location: Whitefield, Bangalore</p>
+<p>Shift: General</p>
+<h3 id="-attached-documents-click-to-open-4">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📘 <a href="./jd/Intern%20-%20Digital%20Solution%20and%20BI.docx">Intern - Digital Solution and BI.docx</a></li>
+<li>📘 <a href="./jd/Intern%20-%20Electronics_R%26D.docx">Intern - Electronics_R&amp;D.docx</a></li>
+<li>📘 <a href="./jd/Intern%20-%20Sensors%20Lab.docx">Intern - Sensors Lab.docx</a></li>
+<li>📘 <a href="./jd/Intern_SW_Test_Engineer.docx">Intern_SW_Test_Engineer.docx</a></li>
+<li>📘 <a href="./jd/Intern_Mechanical_R%26D.docx">Intern_Mechanical_R&amp;D.docx</a></li>
+</ul>
+<hr />
+<h2 id="09-celonisorbit-india"><a id="09-celonis-orbit-india"></a>09. Celonis(Orbit India)</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Associate Value Engineer</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-8">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering</li>
+<li><strong>Job Profile CTC</strong>: ₹ 1300000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-8">📄 Job Description &amp; Drive Details</h3>
+<p>We have recently launched an exciting graduate program at our Bangalore office and have had several new seats approved. We are very keen to see if there is any possibility of connecting with students outside of the standard placement cycle to fill these roles.</p>
+<p>Could you please let us know if you would be able to support us with this request? Additionally, please let us know what information or documentation you would require from our end to move forward.</p>
+<ol>
+<li><p>CTC: 13 Lakh per year</p>
+</li>
+<li><p>Eligible Branches:</p>
+</li>
+</ol>
+<p>• Computer Science and Engineering (CSE)
+• Information Science and Engineering (ISE)
+• Artificial Intelligence &amp; Data Science (AI &amp; DS)
+• Artificial Intelligence &amp; Machine Learning (AI &amp; ML)</p>
+<h3 id="-attached-documents-click-to-open-5">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/_Orbit%20Job%20Description%20%281%29.pdf">_Orbit Job Description (1).pdf</a></li>
+</ul>
+<hr />
+<h2 id="10-kaar-technologies"><a id="10-kaar-technologies"></a>10. Kaar Technologies</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Tech Lieutenant</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Chennai</code></li>
+</ul>
+<h3 id="-opening-overview-9">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Others</li>
+<li><strong>Job Profile CTC</strong>: ₹ 850000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-9">📄 Job Description &amp; Drive Details</h3>
+<p>Greetings from Kaar Technologies!</p>
+<p>Its our pleasure to participate with your esteemed institution for BE/B.Tech 2027 Campus Hiring Program.</p>
+<p>Company Profile:</p>
+<p>Kaar Technologies is a Global SAP Consulting and Services provider with esteemed global clientele. We help companies of every size to achieve their business objectives by leveraging our deep SAP expertise, domain knowledge, and IT best practices. Focus is our key business differentiator. We are one of the very few players in the global IT industry to offer only SAP services and solutions. We have consciously created a focused business model to deliver best of the breed SAP services and solutions to our clients. Also please visit our website to know about us <a href="http://www.kaartech.com">www.kaartech.com</a></p>
+<p>Registration Link: <a href="https://kaar.kebs.app/ats/careers/?id=JOB106177">https://kaar.kebs.app/ats/careers/?id=JOB106177</a></p>
+<ul>
+<li>Only registered candidates are eligible to take up the interview process.</li>
+<li>Once the registrations are done, we will shortlist the candidates from the list and only those candidates can take up the online assessment.</li>
+</ul>
+<p>Job Details:</p>
+<p>Position 2</p>
+<p>Tech Lieutenant (8.5 Lacs p.a.)</p>
+<p>Qualification</p>
+<p>BE/B.Tech - IT, CSE, ECE, EEE, EIE, AI, ML, DS, CBS, CSD, Mech &amp; Mechatronics</p>
+<p>Year of Passing</p>
+<p>2027 Batch</p>
+<p>Criteria</p>
+<p>85% in X Std, XII Std &amp; BE/BTech (NO HISTORY OF ARREARS)</p>
+<p>Work Location</p>
+<p>Chennai</p>
+<p>Important:</p>
+<p>All campus hires will get an opportunity to do internship for the period of nine months. During the first 5 months, interns will be exposed to ERP, Digi-Tech, SAP Full Stack Technical and Functional Modules along with Project Management Training. During this phase they are expected to complete multiple mini projects to get hands on experience in SAP along with a learning stipend of 5,000 INR.</p>
+<p>On successful completion of project review and assessments, interns will be eligible to enter next 4 months, and they will undergo project related training and participate in live projects along with the learning stipend of 10,000 INR. Interns will be elevated to the role of full-time employee based on the final assessment in live project and they are eligible to get their full salary.</p>
+<p><strong>Eligibility Criteria:</strong></p>
+<p>• Consistent 80% score in X Std, 80% in XII Std &amp; 75% in Engineering, without history of arrears and standing arrears.
+• Candidates interested in pursuing full-time higher education are not eligible.
+• Candidates who are not willing to relocate to Chennai are not eligible.
+• Candidates who are not ready to travel to project locations in India and abroad, will not be eligible.
+• Candidates who do not possess constant learning appetite or upskilling their knowledge can refrain from applying.</p>
+<p>Interview Process:</p>
+<p>• Registration Process
+• Online Assessment
+• Group Discussion
+• Level 1 Discussion
+• Level 2 Discussion
+• HR Discussion &amp; Document Verification
+• Offer Process</p>
+<hr />
+<h2 id="11-golgix"><a id="11-golgix"></a>11. GOLGIX</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>ML Engineer,Full Stack Engineer</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-10">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software Information Technology</li>
+<li><strong>Job Profile CTC</strong>: ₹ 500000 - ₹ 1000000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-10">📄 Job Description &amp; Drive Details</h3>
+<p>About GOLGIX &amp; Our Hiring Philosophy:</p>
+<p>GOLGIX is a core product-based US company with focused engineering teams operating across the US and India. We are not a large-scale firm, and we deliberately keep our teams lean, sharp, and highly skilled. Our strength lies not in team size, but in the depth of technical expertise each individual brings to the table.</p>
+<p>For this hiring cycle, we are not looking for bulk hiring instead, we are always specifically focused on bringing in of 1-2 truly exceptional candidates who can contribute meaningfully from Day 1 immediately in 1-2 weeks (Our 90% of employee are from top universities like IITs, NITs etc.). So, I am looking for someone who will be set to join immediately. Quality is something which is not negotiable.</p>
+<p>To be precise, our hiring bar is quite high in terms of quality. We're looking for candidates with strong hands-on project experience and practical problem-solving skills. Candidates who only have basic or intermediate-level knowledge are unlikely to be the right fit for our requirements.</p>
+<p>Before we proceed, could you let me know if your candidates are well-trained and capable of meeting this bar? I just want to avoid a situation later where we're told that suitable candidates aren't available after we've already started the process.</p>
+<p>Few roles we are hiring mostly for:</p>
+<ol>
+<li>ML Engineer</li>
+</ol>
+<p>Applied classical machine learning, boosting algorithms, model development &amp; deployment, deep learning , NLP, Computer Vision experience is highly valued.</p>
+<ol start="2">
+<li>Full Stack Engineer</li>
+</ol>
+<p>More focused towards frontend (React) with mobile application development (React Native), backend, devops, SQL is highly valued.</p>
+<p>What We Are Specifically Looking For in Candidates:</p>
+<p>We value quality over credentials. Here's our non-negotiable checklist:</p>
+<p>Criteria</p>
+<p>Details</p>
+<p>Technical Depth</p>
+<p>Strong fundamentals not just tool familiarity</p>
+<p>GitHub Profile</p>
+<p>Active, well-maintained, with multiple public projects</p>
+<p>Live Projects</p>
+<p>Real-world implementations with measurable outcomes</p>
+<p>Mindset</p>
+<p>Problem-solver, self-driven, and production-ready</p>
+<p>If its works for you, We'd Like to Move Forward:</p>
+<p>I will personally review each profile, connect directly with shortlisted candidates virtually, schedule technical interviews, and drive the process forward keeping it efficient and respectful of everyone's time.</p>
+<p>To be more specific, we're looking for students with strong technical fundamentals and substantial hands-on project experience. For an ML Engineer role, candidates should demonstrate clear depth in machine learning rather than having superficial exposure across multiple technology stacks.</p>
+<p>A portfolio of well-executed projects, coupled with consistent and meaningful GitHub contributions, significantly strengthens a candidate's profile. In our experience, this is where many universities fall short, as they often emphasize theoretical learning over practical implementation. That's one of the key reasons we primarily collaborate with top-tier institutions that place a strong focus on project-based learning and real-world technical exposure.</p>
+<hr />
+<h2 id="12-neoveda-technologies-private-limited"><a id="12-neoveda-technologies-private-limited"></a>12. Neoveda Technologies Private Limited</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Graduate Software Engineer (GSE)</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Dehradun, Uttarakhand</code></li>
+</ul>
+<h3 id="-opening-overview-11">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 500000 - ₹ 800000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-11">📄 Job Description &amp; Drive Details</h3>
+<p>find attached the following documents for your reference:</p>
+<p>• Graduate Software Engineer (GSE) Job Description, which includes the role overview, key responsibilities, required technical skills, eligibility criteria, and compensation details.
+• Neoveda Campus Talent Development Program, outlining our complete hiring and training framework, including the structured learning journey, paid On-the-Job Training (OJT), and employment pathway.</p>
+<p>Please note that our hiring model is different from a conventional internship. Selected students first participate in our Campus Talent Development Program during their final academic year, where they receive structured technical learning, assessments, assignments, and mentorship while continuing their studies.</p>
+<p>The proposed timeline is as follows:</p>
+<p>• Campus Hiring &amp; Assessment: August October 2026
+• Pre-Onboarding Talent Development Program: Following selection until course completion
+• Joining at Neoveda Technologies: January 2027 onwards
+• Paid On-the-Job Training (OJT): 3 Months at our Dehradun office
+• OJT Stipend: 15,000 per month
+• Full-Time Employment: 58 LPA, based on role alignment and performance</p>
+<h3 id="-attached-documents-click-to-open-6">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Neoveda%20GSE%20Intern%20JD-2027.pdf">Neoveda GSE Intern JD-2027.pdf</a></li>
+<li>📕 <a href="./jd/Neoveda_Campus%20Hiring%20Program_2027.pdf">Neoveda_Campus Hiring Program_2027.pdf</a></li>
+</ul>
+<hr />
+<h2 id="13-pivotalassociates"><a id="13-pivotalassociates"></a>13. pivotalassociates</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Business Development,Client Relationships,Talent Acquisition,Software devloper</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-12">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Business Development Engineering - Web / Software Human Resources</li>
+<li><strong>Job Profile CTC</strong>: ₹ 900000 - ₹ 1200000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-12">📄 Job Description &amp; Drive Details</h3>
+<p>To know more about us visit</p>
+<p><a href="https://tsmspl.com/">https://tsmspl.com/</a></p>
+<p>We are hiring following three requirements and 2026-2027 fresh Graduates/Postgraduates</p>
+<p>• Business Development
+• Client Relationships
+• Talent Acquisition
+• Software devloper</p>
+<p>We can offer CTC between 9Lacs to 12Lacs with 3-6months paid internship (Stipend will be 15000/-)</p>
+<p>Apart from above we have technical hiring, and we will hire people of following skills</p>
+<p>• Python
+• JavaScript
+• PHP
+• Java
+• C#
+• Ruby</p>
+<p>Our process is offline/In Person not virtual</p>
+<p>Level 1</p>
+<p>• Group discussion across all roles</p>
+<p>Level 2: Non-Technical roles || Code Challenge for Technical roles</p>
+<p>Role/Task Play</p>
+<p>Level 3: Offer Discussion/HR round (One to One)</p>
+<h3 id="-attached-documents-click-to-open-7">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📘 <a href="./jd/TECH%20KRA.docx">TECH KRA.docx</a></li>
+<li>📘 <a href="./jd/BODS.docx">BODS.docx</a></li>
+<li>📕 <a href="./jd/Recruitment%20KRA.pdf">Recruitment KRA.pdf</a></li>
+<li>📕 <a href="./jd/KRA%20CUSTOMER%20SERVICE%20DIRECTOR%20internal%20%281%29.pdf">KRA CUSTOMER SERVICE DIRECTOR internal (1).pdf</a></li>
+<li>📕 <a href="./jd/KRA%20BD%20internal.pdf">KRA BD internal.pdf</a></li>
+</ul>
+<hr />
+<h2 id="14-london-stock-exchange-group---lseg"><a id="14-london-stock-exchange-group-lseg"></a>14. London Stock Exchange Group - LSEG</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Product Engineering,Service Engineering,Quantitative Analytics</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bengaluru &amp; Hyderabad</code></li>
+</ul>
+<h3 id="-opening-overview-13">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software Information Technology</li>
+<li><strong>Job Profile CTC</strong>: ₹ 1210845 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-13">📄 Job Description &amp; Drive Details</h3>
+<p>The Job Description is attached along with an Application Hints &amp; Tips Sheet to help them navigate the placement process smoothly with LSEG.</p>
+<p>Important Instructions for Candidates:</p>
+<p>The Job Description is being shared strictly for individual preparation purposes only. It must not be circulated or shared beyond the intended recipients. Any breach of this instruction may lead to disqualification from the recruitment process.</p>
+<p>Please find below some key details for your reference:</p>
+<p>• Compensation:
+• Total Fixed Pay: 1,210,845 per annum
+• Discretionary Bonus: 12.5% per annum of Fixed Pay
+• Job Locations: Bengaluru &amp; Hyderabad
+• Application Link Live Date: 3rd August 2025
+• Tentative Joining: August 2027</p>
+<h3 id="-attached-documents-click-to-open-8">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Early%20Careers%20Hiring_2027_Engineering%20JD.pdf">Early Careers Hiring_2027_Engineering JD.pdf</a></li>
+<li>📕 <a href="./jd/Application%20Hints%20%26%20Tips_2027.pdf">Application Hints &amp; Tips_2027.pdf</a></li>
+</ul>
+<hr />
+<h2 id="15-zeai-soft"><a id="15-zeai-soft"></a>15. ZeAI Soft</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Artificial Intelligence, Machine Learning, Data Science, Automation, Full Stack Development, and Digital Innovation</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Chennai</code></li>
+</ul>
+<h3 id="-opening-overview-14">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software Information Technology</li>
+<li><strong>Job Profile CTC</strong>: ₹ 500000 - ₹ 800000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-14">📄 Job Description &amp; Drive Details</h3>
+<p>Greetings from ZeAI Soft!</p>
+<p>We are pleased to share our current campus hiring opportunity for the role of AI, ML &amp; Web Application Developer. We invite eligible Engineering and Arts &amp; Science students to participate in our recruitment process and explore exciting career opportunities in Artificial Intelligence, Machine Learning, Data Science, Automation, and Full Stack Development.</p>
+<p>Please find the Job Description below for your reference. We kindly request you to circulate this opportunity among eligible students and share their profiles for further processing.</p>
+<p>ZeAI Soft</p>
+<p>Work Mode</p>
+<p>Hybrid / On-site</p>
+<p>Compensation</p>
+<p>Internship Stipend: 15,000 per month (First 6 Months)</p>
+<p>Full-Time CTC: 5 8 LPA ( Internship)</p>
+<p>About ZeAI Soft</p>
+<p>ZeAI Soft is a technology-driven company focused on Artificial Intelligence, Machine Learning, Data Science, Automation, Full Stack Development, and Digital Innovation. We are committed to building innovative technology solutions while providing students with hands-on industry exposure through real-time projects, mentorship, and innovation-driven learning experiences.</p>
+<p>Engineering Students</p>
+<p>B.E. / B.Tech</p>
+<p>Computer Science Engineering</p>
+<p>Information Technology</p>
+<p>Artificial Intelligence &amp; Data Science</p>
+<p>Artificial Intelligence &amp; Machine Learning</p>
+<p>Electronics &amp; Communication Engineering</p>
+<p>Assist in developing AI-powered solutions and intelligent systems.</p>
+<p>Work with datasets for analysis, cleaning, and visualization.</p>
+<p>Build, train, and evaluate Machine Learning models.</p>
+<p>Develop web applications, automation workflows, and software solutions.</p>
+<p>Participate in project discussions, brainstorming sessions, and technical reviews.</p>
+<p>Collaborate with cross-functional teams on real-world projects.</p>
+<p>Prepare technical documentation and project reports.</p>
+<p>Contribute innovative ideas for product and process improvement.</p>
+<p>Core Skills</p>
+<p>Basic Programming Knowledge</p>
+<p>Logical &amp; Analytical Thinking</p>
+<p>Problem-Solving Skills</p>
+<p>Communication &amp; Team Collaboration</p>
+<p>Preferred Technical Skills</p>
+<p>Python</p>
+<p>Data Structures &amp; Algorithms</p>
+<p>SQL &amp; Database Management</p>
+<p>Machine Learning Fundamentals</p>
+<p>Data Analysis &amp; Visualization</p>
+<p>HTML, CSS , JavaScript &amp; React.js</p>
+<p>Full Stack Development Basics</p>
+<p>Git &amp; Version Control</p>
+<p>Prompt Engineering</p>
+<p>Soft Skills</p>
+<p>Ownership Mindset</p>
+<p>Adaptability</p>
+<p>Leadership Potential</p>
+<p>Creativity &amp; Innovation</p>
+<p>Time Management</p>
+<p>Presentation Skills</p>
+<p>Professional Ethics</p>
+<p>Continuous Learning Attitude</p>
+<p><strong>Selection Process</strong></p>
+<p>Round 1</p>
+<p>Aptitude &amp; Logical Assessment</p>
+<p>General Aptitude</p>
+<p>Logical Reasoning</p>
+<p>Verbal Ability</p>
+<p>Basic Technical Assessment</p>
+<p>Round 2</p>
+<p>Technical Evaluation</p>
+<p>Round 3</p>
+<p>HR &amp; Behavioral Interview</p>
+<p>What We Look For</p>
+<p>We are looking for students who are curious, self-driven, innovative, and passionate about solving real-world problems using Artificial Intelligence and modern technologies. Candidates should be eager to learn, experiment, collaborate, and contribute to impactful projects while building a successful career in the technology industry.</p>
+<p>Important Notes:</p>
+<p>Innovation-Focused Opportunity</p>
+<p>At ZeAI Soft, innovation is at the core of everything we do. We actively encourage students who are passionate about research, problem-solving, and emerging technologies to join us in building innovative solutions.</p>
+<p>Special Opportunity for Hackathon Participants</p>
+<p>Students who have registered for Hackathon and can demonstrate their innovation, technical skills, or project experience will receive a direct entry to Round 2 (Technical Evaluation), subject to verification of their participation.</p>
+<p>Internship Opportunities for Third-Year Students</p>
+<p>As part of our talent development initiative, we are also looking to engage with third-year (pre-final year) students for internship opportunities. We would appreciate the opportunity to connect with interested students to discuss internships, industry exposure, live projects, and future career opportunities with ZeAI Soft</p>
+<hr />
+<h2 id="16-moveinsync"><a id="16-moveinsync"></a>16. MoveinSync</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Software Development Intern (Frontend)</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-15">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 1000000 - ₹ 1200000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-15">📄 Job Description &amp; Drive Details</h3>
+<p>Greetings from MoveInSync!</p>
+<p>Thank you for reaching out and sharing the campus hiring invitation. We appreciate the opportunity to connect with your institution.</p>
+<p>We are currently hiring for the following position:</p>
+<p>Role: Software Development Intern (Frontend)</p>
+<p>Internship Duration: 12 Months</p>
+<p><strong>Stipend: 40,000 per month</strong></p>
+<p>Work Mode: Work from Office</p>
+<p><strong>Eligibility Criteria:</strong></p>
+<p>• BE/B.Tech students graduating in 2027
+• Branches: Computer Science Engineering (CSE), Information Science Engineering (ISE), Information Technology (IT), Artificial Intelligence &amp; Machine Learning (AI &amp; ML), and Electronics &amp; Communication Engineering (ECE)</p>
+<p>Please find the Job Description (JD) attached for your reference.</p>
+<p>Note: Based on individual performance during the internship, candidates may be considered for conversion to a full-time role. The expected Full-Time (FTE) CTC upon successful conversion is in the range of 1012 LPA.</p>
+<h3 id="-attached-documents-click-to-open-9">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Software%20Development%20Intern%20%28Frontend%29.pdf">Software Development Intern (Frontend).pdf</a></li>
+</ul>
+<hr />
+<h2 id="17-peoplehum-avniro-groups"><a id="17-peoplehum-avniro-groups"></a>17. PeopleHum (Avniro Groups)</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Agentic AI Java Developer, UI Developer for Agentic AI, AI QA Specialist</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Mumbai</code></li>
+</ul>
+<h3 id="-opening-overview-16">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software Information Technology</li>
+<li><strong>Job Profile CTC</strong>: ₹ 540000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-16">📄 Job Description &amp; Drive Details</h3>
+<p>Warm greetings from peopleHum (Avniro Groups)!</p>
+<p>I hope youre doing well. I wanted to check if you have any bachelors candidates from the 2027 batch who are currently looking for opportunities and can join us immediately. We have an exclusive Campus Recruitment Drive for the role of Agentic AI Java Developer, UI Developer for Agentic AI &amp; at peopleHum, a leader in innovative SaaS solutions. These roles offer a clear path from a probationary internship to a full-time position based on performance, paving the way for a rewarding career in the thriving world of SaaS.</p>
+<p>Why peopleHum?</p>
+<p>peopleHum is a Human Capital Platform, built for the next decade, were on a mission to transform The Future of Work. The winner of the 2019 Global Codie award, used by organizations around the world. It is an intuitive, agile and integrated platform built for a complete multi- generational employee experience, from hiring to performance, engagement and HRMS, with the power of machine learning and automation.</p>
+<p>Find out more - <a href="https://www.peoplehum.com">https://www.peoplehum.com</a></p>
+<p>Role: Agentic AI Java Developer</p>
+<p><strong>About the Role</strong></p>
+<p>(a) Probationary Internship:</p>
+<p><strong>Stipend: 30,000/month (subject to taxes)</strong></p>
+<p>Duration: 12 months</p>
+<p>(b) Full-Time Offer:</p>
+<p><strong>CTC: 5.4 LPA (5 LPA fixed + 40k Variable)</strong></p>
+<p>This internship is designed to be flexible, enabling final-year students to transition seamlessly into full-time roles once they complete their exams. We primarily seek students pursuing B.Tech/M.Tech in Computer Science (CS) for the Agentic AI Java Developer and interested Alumni who are passionate about a career in SaaS.</p>
+<p>Recruitment Process</p>
+<p>Our selection process is designed to identify high-potential candidates and includes:</p>
+<p>• Students can register and view the Job Description via this link: Agentic AI Java Developer: <a href="https://a.peoplehum.com/e50yu">https://a.peoplehum.com/e50yu</a>
+• Shortlisting based on academic performance (+70% score in 10th &amp; 12th) &amp; Good Communication Skills (+7/10)
+• Telephonic Screening
+• Two In-Person Interviews (HSR Layout, Bengaluru, Karnataka 560102).
+• Selected candidates will have the flexibility to join immediately or post-exams, based on their availability. (Currently preferring immediate joiners)
+• Selected candidates should be flexible with the work location, as the initial 3-4 months of training will be conducted in Mumbai. Upon successful completion of training, they will be based out of our Bengaluru office for the remainder of their tenure.</p>
+<p>Role: UI Developer for Agentic AI</p>
+<p><strong>About the Role</strong></p>
+<p>(a) Probationary Internship:</p>
+<p><strong>Stipend: 26,000/month (subject to taxes)</strong></p>
+<p>Duration: 12 months</p>
+<p>(b) Full-Time Offer:</p>
+<p><strong>CTC: 4.8 LPA (4.4 LPA fixed + 40k Variable)</strong></p>
+<p>This internship is designed to be flexible, enabling final-year students to transition seamlessly into full-time roles once they complete their exams. We primarily seek students pursuing B.Tech/M.Tech in Computer Science (CS) for the UI Developer for Agentic AI and interested Alumni who are passionate about a career in SaaS.</p>
+<p>Recruitment Process</p>
+<p>Our selection process is designed to identify high-potential candidates and includes:</p>
+<p>• Students can register and view the Job Description via this link: UI Developer for Agentic AI: <a href="https://a.peoplehum.com/ulf9m">https://a.peoplehum.com/ulf9m</a>
+• Shortlisting based on academic performance (+70% score in 10th &amp; 12th) &amp; Good Communication Skills (+7/10)
+• Telephonic Screening
+• Two In-Person Interviews (HSR Layout, Bengaluru, Karnataka 560102).
+• Selected candidates will have the flexibility to join immediately or post-exams, based on their availability. (Currently preferring immediate joiners)
+• Selected candidates should be flexible with the work location, as the initial 3-4 months of training will be conducted in Mumbai. Upon successful completion of training, they will be based out of our Bengaluru office for the remainder of their tenure.</p>
+<p>Role: AI QA Specialist</p>
+<p><strong>About the Role</strong></p>
+<p>(a) Probationary Internship:</p>
+<p><strong>Stipend: 24,000/month (subject to taxes)</strong></p>
+<p>Duration: 12 months</p>
+<p>(b) Full-Time Offer:</p>
+<p><strong>CTC: 3.8 LPA (Fixed)</strong></p>
+<p>This internship is designed to be flexible, enabling final-year students to transition seamlessly into full-time roles once they complete their exams. We primarily seek students pursuing B.Tech/M.Tech in Computer Science (CS) for the AI QA Specialist and interested Alumni who are passionate about a career in SaaS.</p>
+<p>Recruitment Process</p>
+<p>Our selection process is designed to identify high-potential candidates and includes:</p>
+<p>• Students can register and view the Job Description via this link: AI QA Specialist: <a href="https://a.peoplehum.com/9u2ew">https://a.peoplehum.com/9u2ew</a>
+• Shortlisting based on academic performance (+70% score in 10th &amp; 12th) &amp; Good Communication Skills (+7/10)
+• Telephonic Screening
+• Two In-Person Interviews (HSR Layout, Bengaluru, Karnataka 560102).
+• Selected candidates will have the flexibility to join immediately or post-exams, based on their availability. (Currently preferring immediate joiners)
+• Selected candidates should be flexible with the work location, as the initial 3-4 months of training will be conducted in Mumbai. Upon successful completion of training, they will be based out of our Bengaluru office for the remainder of their tenure.</p>
+<p>Why This is a Unique Opportunity for Students</p>
+<p>• Comprehensive Training: We equip students with the skills to excel in SaaS business development.
+• Global Exposure: Interact with international clients and learn about global SaaS markets.
+• Inclusive Culture: Free meals, a vibrant workspace, and a supportive environment.
+• Career Growth: Opportunities for advancement, with lucrative commission structures rewarding performance.</p>
+<hr />
+<h2 id="18-recruit-crm"><a id="18-recruit-crm"></a>18. Recruit CRM</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Trainee Software Engineer</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Fully Remote</code></li>
+</ul>
+<h3 id="-opening-overview-17">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 900000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-17">📄 Job Description &amp; Drive Details</h3>
+<p>Recruit CRM is one of the few fully bootstrapped, remote-first SaaS companies to surpass $10M in Annual Recurring Revenue while remaining profitable every year since inception. We're growing at 40%+ YoY with a 30% annual profit margin, enabling us to invest continuously in our people and technology.</p>
+<p>Discover more about us at</p>
+<p><a href="http://www.recruitcrm.io">www.recruitcrm.io</a>.</p>
+<p>We're hiring passionate 2027 graduates for our Trainee Software Engineer programan opportunity to learn, build real-world products, and earn a full-time Associate Software Engineer role with a CTC of 9 LPA.</p>
+<p>Location: Fully Remote</p>
+<p>Joining: Immediate | Open Positions: 30</p>
+<p>Who Can Apply?</p>
+<p>2027 graduates/postgraduates in Computer Science, Information Technology, or related technical disciplines (BE/B.Tech/BCA/B.Sc./M.Tech/MCA/M.Sc.)</p>
+<p>Training Journey :</p>
+<p>Internship: 3 Months | 21 hrs/week | 7,500/month</p>
+<p>Traineeship: 6 Months | Full-time | 20,000/month</p>
+<p>Full-Time Opportunity: High-performing trainees will be offered a full-time Associate Software Engineer role with a CTC of 9 LPA.</p>
+<p>Job Description: <a href="https://drive.google.com/file/d/1n8BmY0BSidExPwogTsZ-807dWaxX2edY/view?usp=sharing">https://drive.google.com/file/d/1n8BmY0BSidExPwogTsZ-807dWaxX2edY/view?usp=sharing</a></p>
+<p>Apply Here: - <a href="https://careers.recruitcrm.io/17841115307470061803BaU?utm_source=Internal+Hiring+&amp;utm_medium=Candidates+&amp;utm_campaign=Hiring">https://careers.recruitcrm.io/17841115307470061803BaU?utm_source=Internal+Hiring+&amp;utm_medium=Candidates+&amp;utm_campaign=Hiring</a></p>
+<h3 id="-attached-documents-click-to-open-10">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/JD%20-%20TSE%20-%202027.pdf">JD - TSE - 2027.pdf</a></li>
+</ul>
+<hr />
+<h2 id="19-opentext"><a id="19-opentext"></a>19. OpenText</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Internship – AI/ML/DS Developer</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Hyderabad or Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-18">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software Information Technology</li>
+<li><strong>Job Profile CTC</strong>: ₹ 1500000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-18">📄 Job Description &amp; Drive Details</h3>
+<p>reetings from OpenText!</p>
+<p>I hope this message finds you well. I am writing to explore a campus hiring partnership with Nitte Meenakshi Institute of Technology for our upcoming internship drive targeting final-year B.Tech students from the 2027 graduating batch.</p>
+<p>About OpenText</p>
+<p>OpenText is a global leader in Enterprise Information Management, delivering AI-powered, cloud-native solutions that help the world's largest organizations automate processes, secure information, and derive actionable insights. Our product portfolio spans Content Services, Cybersecurity, Digital Experience, Business Network, and Analytics with a growing emphasis on Artificial Intelligence, Machine Learning, and scalable Cloud Architectures.</p>
+<p>INTERNSHIP DETAILS AT A GLANCE</p>
+<p><strong>Eligibility criteria:</strong></p>
+<p>• B. Tech final-year students graduating in 2027, with a minimum of 70% or above in 10th, 12th/Diploma, and all semesters up to the most recent (with no backlogs).
+• Must be an Indian citizen and possess a valid Aadhaar card.</p>
+<p>Disciplines/Specialization:</p>
+<p>Computers Science Engineering, Information Technology, Electronics and Communication, other IT / CS / Data Science / AI/ML related branches</p>
+<p>Employment type:</p>
+<p>6 months Internship</p>
+<p><strong>Stipend</strong></p>
+<p>INR 25,000 per month</p>
+<p>Location</p>
+<p>Hyderabad or Bangalore</p>
+<p>Internship Joining Timeline</p>
+<p><strong>Tentatively August 2026</strong></p>
+<p><strong>Selection Process:</strong></p>
+<p>• Pre-placement Talk (PPT)
+• Coding assessment (Duration - 60 mins)
+• Technical &amp; Managerial Interviews (2 3 rounds)
+• HR Interview</p>
+<p>Visit Timeline</p>
+<p>We would like to initiate the hiring process from the 3rd week of Jun'26. Please share the proposed dates and complete the attached application tracker at the earliest.</p>
+<p>Key Program Highlights</p>
+<p>• Hands-on exposure to enterprise-grade products with global impact
+• Structured mentorship and continuous upskilling through internal programs
+• Equal opportunity to be considered for full-time roles based on performance and business requirements (further details shared during the campus visit)</p>
+<p>Please note:</p>
+<p>• Full-time opportunity: The OpenText Internship Program provides equal opportunities for the interns to be considered for Full-time roles subject to the performance and the business requirement. Further details will be shared during the campus visit.
+• Project Work: Internship projects at OpenText are strictly confidential and shall not be submitted for academic purposes. Students requiring academic project submissions will need to undertake a separate project.
+• Intern Performance Document: An internship service letter will be issued to all interns as part of offboarding. This serves as an official confirmation of the internship (role and duration) from the organization.</p>
+<hr />
+<h2 id="20-mu-sigma"><a id="20-mu-sigma"></a>20. Mu Sigma</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Trainee Decision Scientist-1</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>PAN INDIA</code></li>
+<li><strong>Official Website</strong>: <a href="http://mu-sigma.com">http://mu-sigma.com</a></li>
+</ul>
+<h3 id="-opening-overview-19">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Electrical / Automobile / Mechanical / Others Engineering - Web / Software Information Technology</li>
+<li><strong>Job Profile CTC</strong>: ₹ 500000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-19">📄 Job Description &amp; Drive Details</h3>
+<p>Greetings from Mu Sigma!</p>
+<p>Mu Sigma is the worlds largest pure-play Big Data Analytics and Decision Support Company. We are a hyper-growth unicorn, funded by world-class investors, led by a young workforce of over 3500 Decision Scientists, we work with more than 140 of the Fortune 500 companies across the major industry verticals.</p>
+<p>We are initiating the campus 2027 hiring process, below is the registration link for the students.</p>
+<p>Role: Trainee Decision Scientist-1</p>
+<p>Mu sigma is particularly interested in hiring candidates from the following disciplines:</p>
+<p>• Engineering (B. Tech/BE ONLY)- CSE, ECE, EEE, IT, EIE, ETE, Civil, Mechanical, Industrial &amp; System Engineering, Biotechnology, Computer Science and Business Systems, Electronic Communication &amp; Instrumentation Engineering, Aerospace Engineering, Aircraft Engineering, and OTHERS.
+• Eligibility: Should have a minimum aggregate of 70% in class 10th and 12th and an aggregate of 7 CGPA in UG- NO EXCEPTIONS .</p>
+<p>We would be grateful if you could share the registration link with interested candidates who align with the above categories.</p>
+<p>Furthermore, we would be delighted to conduct pre-placement talks to introduce our organization, its culture, and the opportunities we offer. Please confirm a suitable date to initiate the campus process.</p>
+<p>The compensation stretches across 4 years:</p>
+<p>Compensation over 4 years: 40 Lakhs</p>
+<p>6-months Probation</p>
+<p>5 LPA</p>
+<p>1st Year</p>
+<p>2nd Year</p>
+<p>6.5 LPA</p>
+<p>3rd Year</p>
+<p>12.5 LPA</p>
+<p>4th Year</p>
+<p>16 LPA</p>
+<p>Things to Note:</p>
+<p>Every joiner will be required to serve a probationary period after which sign a 2-year agreement with us.</p>
+<p>If someone chooses to leave within 24 months after probation, a recovery clause of 10 Lakhs will be applicable.</p>
+<h3 id="-attached-documents-click-to-open-11">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/TDS_JD_2027.pdf">TDS_JD_2027.pdf</a></li>
+</ul>
+<hr />
+<h2 id="21-fractal-ai"><a id="21-fractal-ai"></a>21. Fractal ai</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Data Science,Data Engineer,Data Analytics</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Mumbai/Bengaluru/Gurgaon/Chennai/Pune/Noida</code></li>
+</ul>
+<h3 id="-opening-overview-20">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software Information Technology</li>
+<li><strong>Job Profile CTC</strong>: ₹ 700000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-20">📄 Job Description &amp; Drive Details</h3>
+<p>Greetings from Fractal!</p>
+<p>As disscussed.as part of our ongoing efforts to build strong industry-academia relationships, we would like to invite your esteemed institution to collaborate with us for the recruitment of Batch of 2027 graduates. PFA JD for the role of Imagineer &amp; the eligibility criteria with the CTC details below. Request you to confirm dates for the hiring process.</p>
+<p>Campus program: Imagineer</p>
+<p>Imagineer would go through a dynamic program offering them a variety of projects with exposure to business value chain. This will give them an opportunity to experiment within our 3 career tracks namely Decision Science, Data Science &amp; Data Engineer for scaled problem solving.</p>
+<p><strong>Eligibility Criteria:</strong></p>
+<p>• 2027 year of passing
+• 7 CGPA (or equivalent) &amp; above across all academics
+• Candidate must have no active backlogs
+• Eligible Branches: B.Tech (circuit branches only)</p>
+<p>Compensation: Total 3-year compensation: INR 22 lac</p>
+<p>• Year 1 CTC: INR 6 Lac CTC + INR 1 Lac Joining Bonus (with 12 months claw-back)
+• Year 2 CTC: INR 6.6 Lac CTC
+• Year 3 CTC: INR 7.4 Lac CTC + INR 1 Lac Retention Bonus (with 12 months claw-back)</p>
+<p>We will disburse 50k from retention bonus with the 25th month's salary. The remaining 50k will be tied to their first two promotions (25k each) within Imagineer program tenure, based on their performance. If early promotions are not achieved, the 50k linked to the promotions will not be disbursed.</p>
+<p>Note: The issuance of the offer letter is contingent upon the successful completion of the pre-boarding training, a crucial component of the Imagineer Program. It is essential for everyone to ensure that all stringent training criteria's are fulfilled.</p>
+<p>Joining location: Mumbai/Bengaluru/Gurgaon/Chennai/Pune/Noida</p>
+<p>Joining month: July-Sept 2027</p>
+<h3 id="-attached-documents-click-to-open-12">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Imagineer%20JD_Batch%202027%20%281%29.pdf">Imagineer JD_Batch 2027 (1).pdf</a></li>
+</ul>
+<hr />
+<h2 id="22-stylumia"><a id="22-stylumia"></a>22. Stylumia</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Machine Learning Engineer</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bengaluru, Karnataka (On-site)</code></li>
+</ul>
+<h3 id="-opening-overview-21">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Information Technology</li>
+<li><strong>Job Profile CTC</strong>: ₹ 1000000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-21">📄 Job Description &amp; Drive Details</h3>
+<p>Position Machine Learning Engineer Intern (Internship with PPO Opportunity)</p>
+<p>Team Machine Learning</p>
+<p>Location Bengaluru, Karnataka (On-site)</p>
+<p>Duration 3 months, with the opportunity to receive a Pre-Placement Offer (PPO)</p>
+<p><strong>Stipend 25,000 per month</strong></p>
+<p>Opportunity</p>
+<p>This is a three-month, on-site internship based in Bengaluru, offering the opportunity to receive a Pre-Placement</p>
+<p>Offer (PPO) based on performance, business requirements, and successful completion of the internship. High-</p>
+<p>performing interns may be offered a full-time Machine Learning Engineer role with a CTC of 10 LPA.</p>
+<p>About Stylumia</p>
+<p>Stylumia is dedicated to augmenting human intelligence in fashion and lifestyle retail for a better world. With</p>
+<p>relevant data and the right technology, people and businesses in fashion and lifestyle retail can solve challenging</p>
+<p>problems and improve the world.</p>
+<p>In 201516, Stylumia identified the limitations of the technology and solutions available for fashion forecasting</p>
+<p>and demand planning, which were often subjective. These traditional methods fail to address the fundamental</p>
+<p>challenges of fashion trend spotting and forecasting, resulting in significant wastage across the industry. Full-</p>
+<p>price sell-through remains around 50% industry-wide, creating more than USD 750 billion in wastage globally</p>
+<p>each year due to ill-informed decision-making.</p>
+<p>Recognizing the need for a different kind of technology and approach, Stylumia was founded to address these</p>
+<p>challenges. Stylumia is a deep-tech company solving fundamental retail problems, and Stylumia.ai is a global,</p>
+<p>innovation-first Retail AI organization. Its products impact the daily lives of multi-disciplinary personas across</p>
+<p>the retail value chain, helping them eliminate wastage in the industry by augmenting their decisions with</p>
+<p>consumer-backed insights.</p>
+<p>To learn more about how Stylumia works, visit the Stylumia Careers page.</p>
+<p>Qualifications and Requirements</p>
+<p>Ability to self-start and work effectively in a challenging environment by navigating ambiguity and</p>
+<p>bringing structure.</p>
+<p>Experience building production-ready systems.</p>
+<p>Strong problem-solving skills grounded in first-principles thinking.</p>
+<p>Prior internship experience in a relevant quantitative field (e.g., Machine Learning, Deep Learning, NLP,</p>
+<p>Time-Series Analysis, Forecasting, Data Science, or AI) is a plus.</p>
+<p>Expertise in Python with strong coding skills, particularly in ML frameworks such as PyTorch or Hugging</p>
+<p>Face.</p>
+<p>Experience with Large Language Models (LLMs), including fine-tuning and prompt engineering.</p>
+<p>Experience in data wrangling and analysis of large, complex datasets, both structured and unstructured.</p>
+<p>Familiarity with transformer architectures and other deep learning models.</p>
+<p>Proven track record of building ML models through academic projects or internships.</p>
+<p>In-depth experience developing unique, end-to-end projects is a bonus.</p>
+<p>Ability to work collaboratively with cross-functional teams.</p>
+<p>Strong written, verbal, and interpersonal communication skills, with the ability to communicate effectively</p>
+<p>at all levels of the organization.</p>
+<p>Strong problem-solving and project management skills, with the ability to manage multiple projects</p>
+<p>simultaneously and challenge the status quo when necessary.</p>
+<p><strong>Key Responsibilities</strong></p>
+<p>Contribute to all stages of ML projects from translating complex business problems into machine</p>
+<p>learning problems, to performing data analysis and modeling, and delivering solutions to the business.</p>
+<p>Work closely with the ML team on fast-moving projects involving research and development in natural</p>
+<p>language processing, forecasting, and other deep learning applications relevant to the fashion and retail</p>
+<p>industry.</p>
+<p>Train, fine-tune, and deploy Large Language Models for various business applications.</p>
+<p>Develop time-series forecasting models to predict fashion trends and consumer preferences.</p>
+<p>Collaborate closely with leadership, engineering, and other stakeholders including product managers,</p>
+<p>business teams, and customer success teams to deliver impactful business insights.</p>
+<p>Operate with a high level of integrity (Do What We Say) and expect the same of co-workers.</p>
+<p>Compensation and Benefits</p>
+<p><strong>Stipend of 25,000 per month during the internship.</strong></p>
+<p>On-site work environment based in Bengaluru, Karnataka.</p>
+<h3 id="-attached-documents-click-to-open-13">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📘 <a href="./jd/Stylumia_ML_Engineer_JD.docx">Stylumia_ML_Engineer_JD.docx</a></li>
+</ul>
+<hr />
+<h2 id="23-accorian"><a id="23-accorian"></a>23. Accorian</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Penetration Testing</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore ( Hydrid)</code></li>
+</ul>
+<h3 id="-opening-overview-22">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software Information Technology</li>
+<li><strong>Job Profile CTC</strong>: ₹ 900000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-22">📄 Job Description &amp; Drive Details</h3>
+<p>Greetings from Accorian!</p>
+<p>At Accorian, we believe that the future of cybersecurity lies in nurturing and empowering emerging talent. As a leading cybersecurity consulting firm, we are committed to creating opportunities for students to develop industry-relevant skills and build successful careers in information security.</p>
+<p>We are excited to announce the return of our Launchpad Program for Penetration Testing - 2027 Batch, a specialized initiative designed to identify, train, and develop the next generation of cybersecurity professionals.</p>
+<p>The program offers aspiring security enthusiasts an opportunity to gain hands-on exposure to penetration testing methodologies, real-world security challenges, industry best practices, and mentorship from experienced cybersecurity professionals.</p>
+<p>Why Accorian?</p>
+<p>At Accorian, our people are at the heart of everything we do. We foster a culture of continuous learning, innovation, and professional growth, enabling young professionals to thrive in an ever-evolving cybersecurity landscape.</p>
+<p>Our commitment to talent development includes:</p>
+<p>• A learning-focused environment that encourages curiosity and skill development
+• Exposure to real-world cybersecurity engagements and cutting-edge technologies
+• Guidance and mentorship from experienced security practitioners
+• Opportunities to work on challenging projects across diverse industries
+• A collaborative culture that values growth, knowledge sharing, and innovation</p>
+<p>Through the Launchpad Program, we aim to bridge the gap between academic learning and industry expectations, equipping students with the practical knowledge and experience needed to excel in cybersecurity careers.</p>
+<p>We would appreciate your support in sharing this opportunity with your students and encouraging interested candidates to apply. We are confident that this program will serve as a valuable stepping stone for students aspiring to build careers in Penetration Testing.</p>
+<p>For more information about Accorian and our work, please visit <a href="http://www.accorian.com">www.accorian.com</a>.</p>
+<h3 id="-attached-documents-click-to-open-14">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Campus%20Hiring%202027%20-%20Penetration%20Testing.pdf">Campus Hiring 2027 - Penetration Testing.pdf</a></li>
+</ul>
+<hr />
+<h2 id="24-data-grokr"><a id="24-data-grokr"></a>24. Data Grokr</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Software Development Intern</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-23">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 600000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-23">📄 Job Description &amp; Drive Details</h3>
+<p>About DataGrokr</p>
+<p>DataGrokr (<a href="http://www.datagrokr.co">www.datagrokr.co</a>) is a cloud native technology consulting organization providing the next</p>
+<p>generation of data management, cloud and enterprise solutions. We solve complex technology</p>
+<p>problems for our global clients who rely on us for our deep technical knowledge and delivery</p>
+<p>excellence.</p>
+<p>If you are unafraid of technology, believe in your learning ability and are looking to work amongst</p>
+<p>smart, driven colleagues whom you can look up to and learn from, you might want to check us out.</p>
+<p><strong>About the Role</strong></p>
+<p>We are looking for energetic interns to join our software development team. As a member of this</p>
+<p>team, you will:</p>
+<p>Collaborate with the development team to design, develop, and implementsoftware</p>
+<p>solutions.</p>
+<p>Gain practical experience in different cloud platforms(AWS/Azure/GCP) and delve deep into</p>
+<p>the various Cloud services.</p>
+<p>Assistin implementing DevOps practicesto streamline software development and</p>
+<p>deployment processes.</p>
+<p>Develop and maintain Python scripts and applications for various purposes.</p>
+<p>Utilize SQL for database management and data manipulation tasks.</p>
+<p>Gain experience in building ETL pipelines, large scale data platforms, data warehouses and</p>
+<p>data lakes in on premises and cloud.</p>
+<p>Work on real-life projects and have independent deliverables that you will be responsible for.</p>
+<p>Work with extremely talented peers and follow modernengineering practices using agile</p>
+<p>methodologies.</p>
+<p>Prepare your career for becoming a battle-hardened software professional.</p>
+<p>Educational qualification:</p>
+<p>Graduation in Engineering or MCA.</p>
+<p>Must-have skills and attitudes:</p>
+<p>Passion forsoftware development and interest to work in cloud engineering and data</p>
+<p>engineering projects.</p>
+<p>Proficiency in Python programming language.</p>
+<p>Goodknowledge of SQL and databasemanagementsystems.</p>
+<p>Excellent problem-solving skills and a passion for learning new technologies.</p>
+<p>Strong communication and collaboration skills.</p>
+<p>Can-do attitude and take pride in your work.</p>
+<p>Desire to develop leadership skills.</p>
+<p>Desired Skills:</p>
+<p>Good understanding of cloud computing concepts and experience with atleast one cloudplatform (e.g.,</p>
+<p>AWS, Azure, Google Cloud).</p>
+<p>Familiarity with DevOps principles and knowledge of relevant tools (e.g., Docker, Kubernetes,Jenkins).</p>
+<p>Experience with version control systems, particularly Git.</p>
+<p>Knowledge ofsoftware testing practices and tools.</p>
+<p>Knowledge of Artificial Intelligence, Large Language Models (LLMs), and hands-on experience with AI</p>
+<p>tools is a strong plus.</p>
+<p>Other Details:</p>
+<p>Location: The internship will be in Bangalore DataGrokr office premises. Before the internship starts you will have</p>
+<p>to relocate to Bangalore, if you are not in Bangalore.</p>
+<p><strong>Stipend during Internship: Rs. 20,000 per month</strong></p>
+<p>Conversion to Full Time: Candidates who successfully complete their internship and meet Company expectations</p>
+<p>will be awarded Full-Time offers. Post the internship, they could be placed in Data Engineering or Cloud Engineering</p>
+<p>projects based on organization needs and their proficiencies.</p>
+<p>They should be open to work on any of these projects.</p>
+<p>Ourstarting pay package forfull-time developersis 6 LPA with industry competitive benefits.</p>
+<p>Recruitment Process:</p>
+<p>Step 1: Online Test/ Assignments: As a part of our selection process, our first step is a Online exam, which</p>
+<p>consists of MCQs and coding. We will provide detailed instructions on what you need to do as well as the</p>
+<p>deliverables expected.</p>
+<p>Step 2: Technical interviews: Based on the submissions, we will shortlistsome candidates and</p>
+<p>schedule interviews with them. The interview will focus on the Test as well as your technical</p>
+<p>knowledge and problem-solving skills.</p>
+<p>Step 3: Management interview: Based on the performance in the technical interview, some candidates</p>
+<p>will be shortlisted for management interview. The interview will focus on your</p>
+<h3 id="-attached-documents-click-to-open-15">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Software%20Development%20Intern%20JD..%20%281%29%20%281%29%20%281%29.pdf">Software Development Intern JD.. (1) (1) (1).pdf</a></li>
+</ul>
+<hr />
+<h2 id="25-stemx-india"><a id="25-stemx-india"></a>25. STEMx India</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>R&amp;D Engineer, Business Development (BDM) Intern</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-24">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Business Development Information Technology Research</li>
+<li><strong>Job Profile CTC</strong>: ₹ 400000 - ₹ 600000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-24">📄 Job Description &amp; Drive Details</h3>
+<p>Greetings from STEMx Innovations Pvt Ltd(STEMx India)</p>
+<p>We are pleased to connect with your esteemed institution regarding a campus recruitment opportunity for the position of R&amp;D Intern &amp; BDM Intern at our organization, located in Bangalore.</p>
+<p>1.Business Development (BDM) Intern--MBA 2027 PASSED OUT--4VACANCIES-4 TO 6LPA</p>
+<p>2.JD For R&amp;D Engineer Bengaluru----2027 PASSED OUT--4VACANCIES-4 TO 6LPA</p>
+<p>Bachelor's Degree in:</p>
+<p>Electronics &amp; Communication Engineering (ECE)</p>
+<p>Electrical &amp; Electronics Engineering (EEE)</p>
+<p>Computer Science Engineering (CSE)</p>
+<p>Information Science Engineering (ISE)</p>
+<p>Robotics &amp; Artificial Intelligence</p>
+<p>Artificial Intelligence &amp; Machine Learning</p>
+<p>Electronics Engineering</p>
+<p>STEMx Innovations Pvt Ltd is an EdTech company dedicated to promoting practical STEM learning through innovative programs, hands-on projects, and technology-driven education.</p>
+<p>We are interested in hiring talented students from your institution who are passionate about STEM education, technology, and innovation.</p>
+<p>For your reference, we have attached the following documents:</p>
+<p>Company Profile STEMx Innovations Pvt Ltd(STEMx India)</p>
+<p>Job Description</p>
+<p>Compensation Details</p>
+<h3 id="-attached-documents-click-to-open-16">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📘 <a href="./jd/JD%20FOR%20BDM%20INTERN.docx">JD FOR BDM INTERN.docx</a></li>
+<li>📘 <a href="./jd/Compensation%20Details%20%281%29.docx">Compensation Details (1).docx</a></li>
+<li>📘 <a href="./jd/JD%20FOR%20RD%20INTERN.docx">JD FOR RD INTERN.docx</a></li>
+<li>📕 <a href="./jd/STEMx%20brochure%20-%20f%20%281%29_compressed.pdf">STEMx brochure - f (1)_compressed.pdf</a></li>
+</ul>
+<hr />
+<h2 id="26-eon-exea"><a id="26-eon-exea"></a>26. EON EXEA</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Polymath Innovae Fellowship</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-25">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: Super Dream Offer (Above 18 LPA)</li>
+<li><strong>Job Functions</strong>: Engineering</li>
+<li><strong>Job Profile CTC</strong>: ₹ 2100000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-25">📄 Job Description &amp; Drive Details</h3>
+<p>EON EXEA Hackathon cum Recruitment Drive @NMIT</p>
+<p>JD for the Polymath Innovae Fellowship in partnership with Eonexea AI.</p>
+<p>Here are the Compensation Details on PPO.</p>
+<p>Total Annual CTC of 21,00,000:</p>
+<p>• Annual Performance Bonus (10%): 2,10,000
+• Fixed (60% of balance): 11,34,000 (94,500/month)
+• OKR-Linked Variable (40% of balance): 7,56,000 (63,000/month)</p>
+<h3 id="-attached-documents-click-to-open-17">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Polymath%20Innovae%20Fellowship%20Eonexea%20AI.pdf">Polymath Innovae Fellowship Eonexea AI.pdf</a></li>
+<li>📘 <a href="./jd/Eonexea_AI_Polymath_Innovae_Hackathon_Sample_Problem_Statements_Aug_2026%20%281%29.docx">Eonexea_AI_Polymath_Innovae_Hackathon_Sample_Problem_Statements_Aug_2026 (1).docx</a></li>
+</ul>
+<hr />
+<h2 id="27-accenture"><a id="27-accenture"></a>27. Accenture</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Associate Software Engineer,Advanced Associate Software Engineer,Advanced Application Engineer</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+<li><strong>Official Website</strong>: <a href="https://www.accenture.com/">https://www.accenture.com/</a></li>
+</ul>
+<h3 id="-opening-overview-26">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: Mass Recruiter</li>
+<li><strong>Job Functions</strong>: Engineering - Core Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 450000 - ₹ 650000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-26">📄 Job Description &amp; Drive Details</h3>
+<p>As we kick off our campus hiring process for the 2027 graduating batch, we are delighted to partner with your institution once again in identifying and engaging top talent.</p>
+<p>College Name&amp; Location : NMIT Bengaluru - Nitte Meenakshi Institute of Technology, Bengaluru</p>
+<p><strong>Eligibility Criteria</strong></p>
+<p>We are looking for smart young professionals with high learning ability, excellent communication skills and strong programming skills.</p>
+<p>• Highest Qualification:</p>
+<ul>
+<li>B.E/ B.Tech: All Branches</li>
+<li>ME/ M.Tech: All Branches</li>
+<li>MSc: All Branches</li>
+<li>MCA</li>
+</ul>
+<p>Integrated Dual Degree Program:</p>
+<ul>
+<li>BE+ME</li>
+<li>BTech + M.Tech</li>
+<li>BE/ BTech + MSc
+• Only Full time Education (Part-time, distance education &amp; diploma is not eligible)
+• Year of Pass out 2027
+• Lateral Entry : Candidates who have completed a full-time Diploma program and subsequently obtained a B.E./B.Tech degree through an approved full-time Diploma-to-Degree pathway are eligible.
+• Candidate should not have more than 23 months of full-time experience.
+• No active backlogs during application and/or during onboarding.
+• Candidate should not have appeared for Accenture Recruitment assessment/interview process in the last three months.
+• Candidate should have completed the relevant degree (eligible for this job role) in the stipulated duration of the degree. Hence, there should be no gaps during the course of your degree. E.g. candidate must complete the 4-year B. Tech course in 4 years.
+• Students must have Indian citizenship.</li>
+</ul>
+<p>Please note that Bhutan and Nepal nationals can work in India without a need for obtaining a work visa. All other foreign nationals require work visa or an Overseas Citizenship of India (OCI) or Person of Indian Origin (PIO) card to work in India.</p>
+<p>Process Enablement</p>
+<p>Kindly ensure the students are prepared to attend our recruitment process with the following documents and tool requirements:</p>
+<p>• Pan card
+• All students must submit a PAN card which has their photo. This is mandatory and the only identity proof needed during our registration process.
+• PAN cards made when student was a minor will not be entertained. If provided, candidate will be rejected from the process.
+• E-PAN Cards is accepted. Candidates can refer to the instructions available in the help link on the registration page.
+• We will not consider PAN card application acknowledgment as a proof of PAN card. All students must mandatorily submit their PAN number and PAN copy which has their photo.</p>
+<p>Please note: PAN card which has their photo is mandatory the only identity proof accepted during our offer and document verification process.</p>
+<p>• Logistics guidelines &amp; instructions for students participating in our process</p>
+<p>Laptop/Desktop requisites:</p>
+<p>• Laptop/Desktop must be enabled with webcam and microphone. Webcam should capture image clearly
+• Both webcam &amp; microphone must be switched-on across all assessments
+• VPN/Proxy should be disabled</p>
+<p>RAM &amp; Processor</p>
+<p>• Windows: 8 GB+ RAM, i3 8th Generation 2.2 GHz or equivalent/higher
+• Mac: 8 GB RAM, i5 8th Generation or equivalent</p>
+<p>Operating System, Browser &amp; Internet</p>
+<p>• Windows: Windows 11
+• Mac: macOS Version 10.9 or above
+• Google Chrome browser Latest: 3 versions
+• Stable internet connection of 2Mbps+ enabled through broadband connection, avoid unstable 3G/4G networks</p>
+<p>Headsets for communication assessment:</p>
+<p>• Its highly recommended to use a USB enabled Headset with a microphone, or a good quality headset with single jack 3.5 mm having microphone.
+• Students should avoid using Bluetooth headsets or the systems built-in speakers and microphone.</p>
+<p>Important Notes</p>
+<p>• Safe Exam Browser (SEB) must be installed mandatorily.
+• Older versions of SEB must be uninstalled.
+• SEB Download Link: <a href="https://securetest.hirepro.in/accenture/">https://securetest.hirepro.in/accenture/</a>
+• No screen sharing processes are allowed.
+• Bluetooth devices are strictly prohibited, and device Bluetooth setting should be turned off.
+• Compliance &amp; Assessment Conduct</p>
+<p>Student Conduct</p>
+<p>• Any form of copying, cheating, impersonation, or malpractice is strictly prohibited and may lead to disqualification.</p>
+<p>Prohibited Items in Assessment Centre</p>
+<p>• Mobile phones
+• Bluetooth devices
+• Smartwatches
+• Earphones
+• Electronic gadgets
+• Bags
+• Notebooks or loose papers
+• Extra laptops</p>
+<h3 id="-attached-documents-click-to-open-18">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📘 <a href="./jd/Accenture%20Important%20Instructions.docx">Accenture Important Instructions.docx</a></li>
+</ul>
+<hr />
+<h2 id="28-jones-lang-lasalle-jll"><a id="28-jones-lang-lasalle-jll"></a>28. Jones Lang Lasalle (JLL)</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Software Engineer</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-27">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 900000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-27">📄 Job Description &amp; Drive Details</h3>
+<p>We at JLL are excited to conduct the recruitment process and meet the exceptional talent at your institute in August 20TH 2026.</p>
+<p>The role which we will be hiring for will be Interns cum Management Trainees. I have attached the JD for your reference.</p>
+<p>The students will join us as interns in Jan 2027 onward on a stipend of 30,000 per month. Once the internship is competed there will be a performance evaluation done by the HR and business team. Basis the performance evaluation of the candidate, if the candidate has performed well in the 6 months of internship, he/she will be offered a Software Engineer or similar kind of role under the early career management trainee program.</p>
+<p>The CTC for the fulltime role will 9 LPA and the location for which we will hire will be Bangalore.</p>
+<p>Eligibility : Program of B.tech CS/ IT / AI/ ML are eligible. The students should not have a backlog and should not have attendance shortage</p>
+<p>the placement process will be as follows:</p>
+<p>S No</p>
+<p>Event</p>
+<p>People</p>
+<p>Date &amp; Time</p>
+<p>Logistics / Operational Requirement</p>
+<p>1</p>
+<p>JLL Introduction, Preplacement talk</p>
+<p>Panel on campus</p>
+<p>09:30 onwards</p>
+<p>3</p>
+<p>JLL Test</p>
+<p>Panel on campus</p>
+<p>11am</p>
+<p>Test of all appearing candidates. Computer lab arrangement for all attending students to give online test</p>
+<p>4</p>
+<p>Group discussion</p>
+<p>Panel on campus</p>
+<p>11:30 am onwards</p>
+<p>5</p>
+<p>Interview round</p>
+<p>Panel on campus</p>
+<p>1:30 pm onwards</p>
+<p>Face to face interview will the panel. One room</p>
+<h3 id="-attached-documents-click-to-open-19">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📘 <a href="./jd/Software%20Engineer%201.docx">Software Engineer 1.docx</a></li>
+</ul>
+<hr />
+<h2 id="29-zf-group"><a id="29-zf-group"></a>29. ZF Group</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Web Development Intern,Research Intern – LLMs, SLMs &amp; Generative AI,NLP Intern,Research Intern – Knowledge Graphs and AI in Mechanical Engineering</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Hyderabad</code></li>
+</ul>
+<h3 id="-opening-overview-28">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 900000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-28">📄 Job Description &amp; Drive Details</h3>
+<p>Internship opportunity for your engineering student cohort at ZF Group. Our Internship program offers a comprehensive and enriching experience designed to enhance the technical skills and professional growth of your students.</p>
+<p>Key details of our Internship program are as follows:</p>
+<p>• Stipend: 35,000
+• No.of positions: 8-10
+• Work Location: Hyderabad
+• Preferred Program: BE, M.Tech/ M.E/ M.Tech (Research)/ MS (Research)/ Ph.D. Engineering/ Ph.D. Science/ Integrated Ph. D
+• CTC - PPO based on performance: 9,00,000 LPA</p>
+<p>We believe this program will provide valuable industry exposure and a potential career path for your students. Additionally, we would appreciate it if you could provide us with potential dates to commence the hiring process, including any necessary formalities or schedules your institution may follow.</p>
+<p>JD for the role attached for your reference</p>
+<h3 id="-attached-documents-click-to-open-20">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Intern_Natural%20Language%20Processing%20%28NLP%29.pdf">Intern_Natural Language Processing (NLP).pdf</a></li>
+<li>📕 <a href="./jd/Intern%20-%20Web%20Development.pdf">Intern - Web Development.pdf</a></li>
+<li>📕 <a href="./jd/Research%20Intern%20%E2%80%93%20LLMs_SLMs%20%26%20Generative%20AI.pdf">Research Intern – LLMs_SLMs &amp; Generative AI.pdf</a></li>
+<li>📕 <a href="./jd/Intern_LLM_Mechanical_Engineering.pdf">Intern_LLM_Mechanical_Engineering.pdf</a></li>
+</ul>
+<hr />
+<h2 id="30-mathco"><a id="30-mathco"></a>30. MathCo</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>AI-Analyst</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-29">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Data &amp; Analytics Information Technology</li>
+<li><strong>Job Profile CTC</strong>: ₹ 600000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-29">📄 Job Description &amp; Drive Details</h3>
+<p>TheMathCompany or MathCo is a global Enterprise AI and Analytics company trusted for data-driven decision-making by leading Fortune 500 and Global 2000 enterprises. Founded in 2016, MathCo builds custom AI and advanced analytics solutions focused on enterprise problem-solving through its innovative hybrid model.</p>
+<p>We are excited to announce our Graduate Hiring Program and are keen to partner with your esteemed institution for campus placements. We are looking to recruit final year B.E/ B.Tech students from the Class of 2027 for the position of Analyst.</p>
+<p>Key Details:</p>
+<p>Position: AI-Analyst</p>
+<p>Remuneration: 6 LPA + 2 LPA Assured Bonus</p>
+<p><strong>Eligibility: B.E / B.Tech (any engineering stream), MCA, M.Sc Mathematics, M.Sc Statistics.</strong></p>
+<p>Work Location: Bengaluru</p>
+<p>Interview Mode: In-Person</p>
+<p>For your reference, we have attached the job description. Please review and share the database of the eligible students at your earliest.</p>
+<p>To learn more about MathCo, please visit our website.</p>
+<h3 id="-attached-documents-click-to-open-21">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/2027%20MathCo%20Campus%20Placements%20%E2%80%93%20AI%20Analyst%20JD.pdf">2027 MathCo Campus Placements – AI Analyst JD.pdf</a></li>
+</ul>
+<hr />
+<h2 id="31-supermoney-a-flipkart-company"><a id="31-super-money-a-flipkart-company"></a>31. super.money (a Flipkart Company)</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>SDE</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>PAN INDIA</code></li>
+</ul>
+<h3 id="-opening-overview-30">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 1800000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-30">📄 Job Description &amp; Drive Details</h3>
+<p>Dear Sir,</p>
+<p>Super.Money (a Flipkart Company) is recruiting for SDE-1 roles.</p>
+<p>I am attaching the JD for the SDE-1 position.</p>
+<p>The CTC:</p>
+<ul>
+<li>Internship: 1,00,000 per month</li>
+<li>Fixed: 18 LPA</li>
+<li>Gratuity &amp; Insurance: 0.82L</li>
+<li>Variable: Up to 1.8 LPA</li>
+<li>ESOPs &amp; Other Benefits: 44 stock units (~44 LPA at the billion-dollar valuation, based on the anticipated valuation as of last year)</li>
+</ul>
+<p>Next Steps:</p>
+<ul>
+<li>Interested students are requested to fill out the form (supermoney) by 7 PM Thursday ( 19 August 2026)</li>
+<li>Shortlisted candidates will be invited for assessments and interviews on Thursday (3 September)</li>
+<li>Venue - to be announced.</li>
+</ul>
+<h3 id="-attached-documents-click-to-open-22">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Campus_SDE1_super.moneyJD%20.pdf">Campus_SDE1_super.moneyJD .pdf</a></li>
+</ul>
+<hr />
+<h2 id="32-net-connect-global"><a id="32-net-connect-global"></a>32. Net Connect Global</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Customer Success Executive,Growth Associate,Talent Acquisition</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-31">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 600000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-31">📄 Job Description &amp; Drive Details</h3>
+<p>Kindly find attached JD's and details below:</p>
+<p><strong>CTC for CSM - 6 LPA (MBA only)</strong></p>
+<p>Growth Associate role-6 LPA (BE only)</p>
+<p>TA role is 3.5LPA (MBA only)</p>
+<h3 id="-attached-documents-click-to-open-23">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Customer%20Success%20Executive.pdf">Customer Success Executive.pdf</a></li>
+<li>📕 <a href="./jd/Growth%20Associate.pdf">Growth Associate.pdf</a></li>
+<li>📕 <a href="./jd/TA%20Role%20JD.pdf">TA Role JD.pdf</a></li>
+</ul>
+<hr />
+<h2 id="33-aadhar-housing-finance-ltd"><a id="33-aadhar-housing-finance-ltd"></a>33. Aadhar Housing Finance Ltd</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Data Scientist, Business Analyst &amp; Data Engineer</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-32">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Data &amp; Analytics</li>
+<li><strong>Job Profile CTC</strong>: ₹ 900000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-32">📄 Job Description &amp; Drive Details</h3>
+<p>We are Hiring in Data Science Department, for various roles Data Scientist, Business Analyst &amp; Data Engineer as a Freshers at Mumbai (Thane) as Apprentice (Its Permanent Job) basis the Performance we shall take Candidates on the rolls of Aadhar Housing Finance Ltd.</p>
+<p>There will be three Position Data Scientist, Business Analyst &amp; Data Engineer JD Attached</p>
+<p>Compensation : 7+ 2 Lakhs i.e., Rs.58,000/- take home.</p>
+<p>Days of Working : Monday to Friday</p>
+<p>Vacancy Count : 8-10 Candidates</p>
+<p>Other Benefits : 2 Lakhs Medical Coverage Employee + 5 Dependants (Over &amp; Above CTC)</p>
+<p>Evaluation Levels</p>
+<p>• Online Test Technical Evaluation
+• 1 Rounds of Technical Evaluation Virtual Interview
+• Personality Interview</p>
+<hr />
+<h2 id="34-nutanix"><a id="34-nutanix"></a>34. Nutanix</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>SRE Intern</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore/Pune</code></li>
+</ul>
+<h3 id="-opening-overview-33">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: Super Dream Offer (Above 18 LPA)</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 2035000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-33">📄 Job Description &amp; Drive Details</h3>
+<p>Nutanix Certified Associate (NCA) Certification Program for your 3rd year engineering students.</p>
+<p>The program is designed to build strong fundamentals in cloud infrastructure, virtualization, and hyperconverged systems through Nutanix-led enablement sessions, concluding with an opportunity for students to earn the NCA certification, a globally recognized entrylevel credential. I have attached the Program details.</p>
+<p>Please find below the tasks, responsibilities, and proposed timelines. We would prefer to follow this schedule, but feel free to suggest an alternative timeline based on student availability.</p>
+<p>Events</p>
+<p>Nutanix Team</p>
+<p>NMIT TPO</p>
+<p>Proposed Timelines</p>
+<p>Campus Branding &amp; Communication Rollout</p>
+<p>Share content for posters/banners to be installed on-campus to build visibility among students.</p>
+<p>Share and brief students on the NCA Certification Program and eligibility criteria.</p>
+<p>Install posters/banners on-campus to build visibility among students.</p>
+<p>March 2, 2025</p>
+<p>Induction to NCA Certification Program</p>
+<p>Conduct orientation for NCA Certification Program, Nutanix Systems Reliability Engineer Intern Role and Q&amp;A sessions for participating students.</p>
+<p>Share program timelines and guide students through the learning path.</p>
+<p>Coordinate communication and ensure student participation. Provide classroom/lab infrastructure where required.</p>
+<p>March 6, 2026</p>
+<p>Student Enrollment</p>
+<p>Share enrollment details with students and encourage registration before the deadline.</p>
+<p>Communicate the enrollment process to students and ensure timely registration.</p>
+<p>March 12, 2026</p>
+<p>Shortlist</p>
+<p>Share list of shortlisted students eligible for Induction &amp; HackerRank Assessment.</p>
+<p>Communicate with shortlisted students and ensure they prepare for Online Assessment &amp; Tech Interviews.</p>
+<p>March 15, 2026</p>
+<p>Induction + HackerRank Assessment + Technical Interview Round (On Campus)</p>
+<p>Conduct Orientation followed by the Online Assessment.</p>
+<p>Shortlist candidates based on assessment results and share with TPO.</p>
+<p>Conduct one Technical Interview Round.</p>
+<p>Arrange logistics for orientation, online assessment, and technical interviews.</p>
+<p>Communicate the shortlist with students and ensure they attend the Technical Interview</p>
+<p>7 - 8 April 2026</p>
+<p>3Day InCampus Training</p>
+<p>Conduct 3Day inperson training on campus.</p>
+<p>6 - 7 hours per day.</p>
+<p>Arrange logistics and ensure student participation</p>
+<p>13 - 15 April 2026</p>
+<p>OnCampus Proctored Certification Exam</p>
+<p>Finalize certification exam date; conduct the exam on campus jointly with Nutanix and NMIT teams.</p>
+<p>Arrange exam logistics and support proctoring</p>
+<p>April 20, 2026</p>
+<p>Closing Ceremony &amp; Certificate Distribution</p>
+<p>Plan and conduct the closing ceremony, including communication of next steps and distribution of certificates to certified students.</p>
+<p>Support with logistics and coordination as needed.</p>
+<p>Last week of April</p>
+<hr />
+<h2 id="35-epsilon"><a id="35-epsilon"></a>35. Epsilon</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Associate Software Engineer,Associate Database Administrator</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-34">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 800000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-34">📄 Job Description &amp; Drive Details</h3>
+<p>As part of our upcoming campus hiring drive scheduled on 22nd Aug (Pre-placement Talk) and 25th Aug (Interviews), please find attached two Job Descriptions for your students reference.</p>
+<p>We would like to open the applications for students of CSE,ISE, IT &amp; AIML streams, and we request you to kindly circulate them among the students so they can review the details and prepare accordingly.</p>
+<p>Internship stippend: 30000</p>
+<p>We also request you to kindly ask the students to go through the attached Job Descriptions and submit their applications through the links provided below:</p>
+<p>(Company link)</p>
+<p>• DBA - <a href="https://careers.publicisgroupe.com/event-5849/talentcommunity/form?lang=en-US">https://careers.publicisgroupe.com/event-5849/talentcommunity/form?lang=en-US</a>
+• Saas Ops - <a href="https://careers.publicisgroupe.com/event-5848/talentcommunity/form?lang=en-US">https://careers.publicisgroupe.com/event-5848/talentcommunity/form?lang=en-US</a></p>
+<p>Registration Window: [20-Aug-2026] [12:00 pm IST] [21-Aug-2026] [03:30 pm IST)</p>
+<p>Very important point: its a mandatory to apply in both company link and superset.</p>
+<h3 id="-attached-documents-click-to-open-24">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Associate%20Software%20Engineer%20_SaaS%20Ops%20_%20JD.pdf">Associate Software Engineer _SaaS Ops _ JD.pdf</a></li>
+<li>📕 <a href="./jd/Associate%20Database%20Administrator_%20DBA%20JD.pdf">Associate Database Administrator_ DBA JD.pdf</a></li>
+</ul>
+<hr />
+<h2 id="36-zensar-technologies"><a id="36-zensar-technologies"></a>36. Zensar Technologies</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Intern</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Pune</code></li>
+</ul>
+<h3 id="-opening-overview-35">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering</li>
+<li><strong>Job Profile CTC</strong>: ₹ 1000000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-35">📄 Job Description &amp; Drive Details</h3>
+<p>we are pleased to inform you that we are considering B.E./B. Tech students graduating in June/July 2027 from your esteemed institution for our upcoming campus hiring program.</p>
+<p>As an initial step in our campus recruitment process, we would like to schedule a Pre-Placement Talk (PPT) and Online Assessment. To help us plan the session effectively, we request you to kindly share the approximate number of eligible and interested students who would like to participate in the campus drive.</p>
+<p>About Zensar Technologies</p>
+<p>Zensar Technologies is a leading global digital solutions and technology services company and part of the RPG Group, headquartered in Pune, India. We specialize in digital engineering, cloud, data, and AI-led transformation services, helping enterprises accelerate innovation and achieve business outcomes.</p>
+<p>• Revenue: ~USD 624 million (FY25FY26)
+• Employee Strength: 10,000+ professionals globally
+• Global Presence: Operations across 16+ countries with 30+ offices worldwide</p>
+<p>Zensar partners with global enterprises to drive innovation, enhance customer experiences, and enable digital transformation at scale.</p>
+<p>Internship Opportunity</p>
+<p>Role: Intern</p>
+<p>Work Location: Pune</p>
+<p>Work Mode: Work from Office</p>
+<p>Joining Preference: Immediate Availability for Internship</p>
+<p>Internship Benefits for 2027 Graduating Students</p>
+<p>• Internship Duration: 6 Months
+• Designation: Intern
+• Stipend: 20,000 per month
+• PPO CTC: 10 LPA, based on performance, after successful completion of 6 months of Internship</p>
+<p>Academic Eligibility</p>
+<p>Qualification</p>
+<p>• B.E. / B.Tech.</p>
+<p>Eligible Branches</p>
+<p>• Computer Science Engineering (CSE)
+• Information Technology (IT)
+• Artificial Intelligence &amp; Machine Learning (AIML)
+• Artificial Intelligence &amp; Data Science (AIDS)
+• Data Science and related specializations</p>
+<p>Student Eligibility</p>
+<p>• Students currently in the 7th semester of their engineering program.
+• Expected graduation in June/July 2027.
+• Basic programming knowledge in languages such as Python, Java, or JavaScript.
+• Understanding of data structures, algorithms, system design concepts, and coding fundamentals.
+• Strong analytical and problem-solving skills.
+• Curiosity, adaptability, and eagerness to learn in an agile work environment.
+• Willingness to work from any Zensar office location as per business requirements.</p>
+<p>Academic Criteria</p>
+<p>• SSC (10th): 75% and above
+• HSC (12th): 70% and above
+• Graduation: Minimum 6.5 CGPA (up to the 6th semester)</p>
+<p>Additional Requirements</p>
+<p>• Willingness to relocate, if required.
+• Readiness to work full-time from the assigned office location.
+• Commitment to working from office on all working days.</p>
+<hr />
+<h2 id="37-hourglass-research"><a id="37-hourglass-research"></a>37. Hourglass Research</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Patent Associates</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-36">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 750000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-36">📄 Job Description &amp; Drive Details</h3>
+<p>JD for your reference:</p>
+<p>Role Overview</p>
+<p>We are looking for motivated graduates to join as Patent Associates. The role involves supporting various patent and intellectual property activities, with opportunities to work across different subject areas.</p>
+<p><strong>Key Responsibilities</strong></p>
+<p>• Conduct patent and prior-art searches and research.
+• Analyse patents, technical documents, and related information.
+• Assist in patent drafting and prosecution-related activities.
+• Support preparation of patent/IP reports and documentation.
+• Conduct technology and patent landscape research as required.
+• Ensure accuracy, quality, and timely completion of assignments.</p>
+<p>Eligibility &amp; Skills</p>
+<p>• Graduate in B.E./B. Tech/M.E./M. Tech (CSE, IT,AIDS ,AIML,CSBS, ECE, VLSI or EEE only)
+• Strong analytical, research, and problem-solving skills.
+• Good written and verbal communication.
+• Attention to detail and willingness to learn.
+• JD was mentioned in the email body, I am attaching it once again for your reference. The CTC will be 7.5LPA. We will hire students for internship, which will start from mid-February 2027. The stipend amount is still under review and shall confirm you soon.</p>
+<p>Eligibility &amp; Skills</p>
+<p>• Graduate in B.E./B.Tech/M.E./M.Tech (CSE, IT, ECE, or EEE only)
+• Strong analytical, research, and problem-solving skills.
+• Good written and verbal communication.
+• Attention to detail and willingness to learn.</p>
+<h3 id="-attached-documents-click-to-open-25">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Hourglass%20Research%20JD%20-%20Associate%2008.24.pdf">Hourglass Research JD - Associate 08.24.pdf</a></li>
+</ul>
+<hr />
+<h2 id="38-center-of-data-for-public-good-cdpg"><a id="38-center-of-data-for-public-good-cdpg"></a>38. Center of Data for Public Good (CDPG)</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>AI and Mobility Internships</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-37">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 600000 - ₹ 800000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-37">📄 Job Description &amp; Drive Details</h3>
+<p>Knowledge of C++ is mandatory.</p>
+<p>Stiphend is 30K for 5 day office internship.</p>
+<p>Location is IISc, Bangalore.</p>
+<p>Eligible - CSE &amp; Allied branches.</p>
+<p>Once they are considered for full-time based on their performance, the CTC would be 6 to 8 LPA.</p>
+<h3 id="-attached-documents-click-to-open-26">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📘 <a href="./jd/2026.08_JD-AI%20Mobility%20RnD%20Internship%20%281%29.docx">2026.08_JD-AI Mobility RnD Internship (1).docx</a></li>
+</ul>
+<hr />
+<h2 id="39-codeyoung"><a id="39-codeyoung"></a>39. Codeyoung</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>International Sales Specialist (ISS)</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-38">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 836000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-38">📄 Job Description &amp; Drive Details</h3>
+<p>We are pleased to invite your students to our Mega Placement Drive for Immediate Joiners.</p>
+<p>Drive Details</p>
+<p>• Date: 31st August 2026
+• Time: 12:00 PM 2:00 PM
+• Venue: Codeyoung Office, 1st Floor, Urban Vault, 1350, 17th Cross Road, Parangi Palaya, Sector 2, HSR Layout, Bengaluru 560102</p>
+<p>Open Position</p>
+<p>International Sales Specialist (ISS)</p>
+<p><strong>CTC: 8.36 LPA (4.36 LPA Fixed + 4.00 LPA Variable)</strong></p>
+<p>Higher packages available for experienced candidates.</p>
+<p>Eligibility</p>
+<p>• Freshers &amp; Experienced Candidates
+• Excellent communication skills
+• Interest in building a career in Sales
+• Work from Office | US Shift | 6 Days a Week</p>
+<h3 id="-attached-documents-click-to-open-27">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/JD-ISS.pdf">JD-ISS.pdf</a></li>
+</ul>
+<hr />
+<h2 id="40-opentext"><a id="40-opentext"></a>40. OpenText</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Intern</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-39">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 1550000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-39">📄 Job Description &amp; Drive Details</h3>
+<p>INTERNSHIP DETAILS AT A GLANCE</p>
+<p><strong>Eligibility criteria:</strong></p>
+<p>• B. Tech final-year students graduating in 2027, with a minimum of 70% or above in 10th, 12th/Diploma, and all semesters up to the most recent (with no backlogs).
+• Must be an Indian citizen and possess a valid Aadhaar card.</p>
+<p>Disciplines/Specialization:</p>
+<p>Computers Science Engineering, Information Technology, Electronics and Communication, other IT / CS / Data Science / AI/ML related branches</p>
+<p>Employment type:</p>
+<p>6 months Internship</p>
+<p><strong>Stipend</strong></p>
+<p>INR 25,000 per month</p>
+<p>Location</p>
+<p>Bangalore</p>
+<p>Internship Joining Timeline</p>
+<p><strong>Tentatively Oct 2026</strong></p>
+<p><strong>Selection Process:</strong></p>
+<p>• Pre-placement Talk (PPT)
+• Coding assessment (Duration - 60 mins)
+• Technical &amp; Managerial Interviews (2 3 rounds)
+• HR Interview</p>
+<p>Visit Timeline</p>
+<p>Please share the proposed dates and complete the attached application tracker at the earliest.</p>
+<p>Key Program Highlights</p>
+<p>• Hands-on exposure to enterprise-grade products with global impact
+• Structured mentorship and continuous upskilling through internal programs
+• Equal opportunity to be considered for full-time roles based on performance and business requirements (further details shared during the campus visit)</p>
+<p>Please note:</p>
+<p>• Full-time opportunity: The OpenText Internship Program provides equal opportunities for the interns to be considered for Full-time roles subject to the performance and the business requirement. Further details will be shared during the campus visit.</p>
+<h3 id="-attached-documents-click-to-open-28">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Internship%20JD%20%282%29.pdf">Internship JD (2).pdf</a></li>
+</ul>
+<hr />
+<h2 id="41-living-waters-intelligence"><a id="41-living-waters-intelligence"></a>41. Living Waters Intelligence</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Content Developer</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>WFH</code></li>
+</ul>
+<h3 id="-opening-overview-40">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 500000 - ₹ 700000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-40">📄 Job Description &amp; Drive Details</h3>
+<p>Greetings from Living Waters Intelligence</p>
+<p>Please find the compensation details below:</p>
+<p>• Internship stipend: 20,000 per month
+• Full-time conversion: Based on the interns performance, quality of deliverables, technical capability, and business requirements
+• Expected CTC on confirmation: 5 LPA to 8 LPA for suitable candidates (subjected to change)</p>
+<p>The role provides hands-on exposure to creating industry-oriented learning content in Data Engineering, Data Analytics, ML and Generative AI, including technical presentations, learner guides, labs, assessments, and supporting documentation.</p>
+<p>We are looking for motivated candidates from CSE, IT, AI &amp; ML, or related engineering disciplines, with a strong interest in Data Engineering, Data Analytics, ML, and Generative AI. Candidates should have foundational knowledge of Python, SQL, databases, and cloud technologies, along with good research, writing, presentation, and communication skills.</p>
+<p>The selected candidate will be involved in developing industry-focused training content, including presentations, learner guides, hands-on labs, assignments, quizzes, and assessments, while gaining practical exposure to Data Engineering, Analytics, ML, and Generative AI.</p>
+<hr />
+<h2 id="42-infosys"><a id="42-infosys"></a>42. Infosys</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Specialist Programmer (Trainee)/Digital Specialist Engineer (Trainee)</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>PAN INDIA</code></li>
+<li><strong>Official Website</strong>: <a href="http://infosys.com">http://infosys.com</a></li>
+</ul>
+<h3 id="-opening-overview-41">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering</li>
+<li><strong>Job Profile CTC</strong>: ₹ 700000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-41">📄 Job Description &amp; Drive Details</h3>
+<p>Warm greetings from Infosys.</p>
+<p>As a global leader in next-generation AI-first digital services and consulting, Infosys is dedicated to amplifying human potential and creating transformative opportunities for people, businesses, and communities. With a workforce of 320,000+ professionals, we enable 1,900+ clients across 59 countries to navigate their AI and digital transformation journeys through an AI-powered core, agile digital solutions at scale, and our commitment to continuous learning.</p>
+<p>We are delighted to invite your esteemed institution to participate in the Infosys Campus Recruitment Program for the Class of 2027. Through this initiative, we seek to identify exceptional talent for our Specialist Programmer (Trainee) and Digital Specialist Engineer (Trainee) roles.</p>
+<p>Our Revised Compensation Structure:</p>
+<p>• Specialist Programmer L3 (Trainee): INR 21 LPA
+• Specialist Programmer L2 (Trainee): INR 16 LPA,
+• Specialist Programmer L1 (Trainee): INR 10 LPA + INR 1 Lakh Joining Bonus
+• Digital Specialist Engineer (Trainee): INR 6.25 LPA + INR 75,000 Joining Bonus</p>
+<p>Recruitment Format: This year's campus recruitment program will be conducted on-campus through an in-person evaluation process designed to identify candidates whose technical acumen and behavioral competencies align with our AI-driven organizational vision.</p>
+<p>Assessment Framework:</p>
+<p>• Format: A three-hour evaluation comprising programming tasks of varying levels of difficulty.</p>
+<p>Eligibility Parameters:</p>
+<p>Qualifying Programs: BE, BTech, ME, MTech, MCA, MSc (5-year Integrated), MSc (Mathematics)</p>
+<p>Eligible Specializations:</p>
+<p>• Computer Science Engineering
+• Information Science &amp; Engineering
+• Data Science / Artificial Intelligence &amp; Machine Learning
+• Information Technology
+• Cybersecurity
+• Software Engineering
+• Electronics and Communication Engineering
+• Electronics and Electrical Engineering
+• Allied disciplines within Computer Science and Information Technology domains</p>
+<p>Academic Requirements: As per attached criteria Graduating Batch: 2027</p>
+<p>Action Required:</p>
+<p>Please review the attached Eligibility Criteria document and submit the completed Student Details Sheet by 6 July 2026, 10 AM. Nominated candidates will receive email invitations to complete the mandatory Infosys Application Form, which serves as the gateway to our evaluation process.</p>
+<p>Critical Guidelines:</p>
+<p>• Personal email addresses only; institutional domain addresses cannot be processed
+• Our system-driven protocols necessitate strict adherence to submission deadlines
+• Post-deadline modifications or additions to nomination lists cannot be accommodated</p>
+<h3 id="-attached-documents-click-to-open-29">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Infosys_Assessment_Guidelines.pdf">Infosys_Assessment_Guidelines.pdf</a></li>
+<li>📕 <a href="./jd/IMPORTANT%20INSTRUCTIONS%20FOR%20CANDIDATES.pdf">IMPORTANT INSTRUCTIONS FOR CANDIDATES.pdf</a></li>
+<li>📕 <a href="./jd/Infosys%20Campus%20Recruitment%20Program_Elgibility%20Criteria.pdf">Infosys Campus Recruitment Program_Elgibility Criteria.pdf</a></li>
+</ul>
+<hr />
+<h2 id="43-agile-robots"><a id="43-agile-robots"></a>43. Agile Robots</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Technical Interns</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-42">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 600000 - ₹ 800000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-42">📄 Job Description &amp; Drive Details</h3>
+<p>We are currently looking for candidates to join us as Technical Interns for our Bangalore location.</p>
+<p>We request you to kindly share the list of interested and eligible candidates who have completed their examinations and are available to join the internship.</p>
+<p>We are looking for candidates from backgrounds such as Robotics, Electronics, Computer Science, Mechatronics, or related fields, with knowledge or interest in Robotics, ROS2, Python, C++, and automation technologies.</p>
+<p>Internship Salary will be 25,000 per month. Conversion to a permanent role and salary will be based on performance and will be decided based on open positions.</p>
+<hr />
+<h2 id="44-prodapt"><a id="44-prodapt"></a>44. Prodapt</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>FORWARD DEPLOYED ENGINEER</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>PAN INDIA</code></li>
+<li><strong>Official Website</strong>: <a href="http://www.prodapt.com/">http://www.prodapt.com/</a></li>
+</ul>
+<h3 id="-opening-overview-43">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 600000 - ₹ 1500000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-43">📄 Job Description &amp; Drive Details</h3>
+<p>FORWARD DEPLOYED ENGINEER</p>
+<p>Experience: 02 Years</p>
+<p>60% throughout academics.</p>
+<p>6-15 LPA or above based JLPT.</p>
+<p>Role Summary:</p>
+<p>This role focuses on rapid prototyping and full-stack execution. As a Junior FDE, you convert ideas into working demos using the FDE Stack (Next.js + FastAPI + Postgres/Chroma + Docker). You work across frontend and backend, integrate LLM APIs, and implement basic RAG pipelines. Strong debugging, documentation, and communication skills are essential.</p>
+<p><strong>Key Responsibilities:</strong></p>
+<p>• Full Stack Development: Build SPA web UIs using React (Next.js) and backend services using Python (FastAPI).
+• API Integration: connect internal microservices with LLM providers (OpenAI, Anthropic, etc.) using Postman for testing and validation.
+• Applied AI Implementation: Implement basic RAG (Retrieval-Augmented Generation) pipelines involving text parsing, chunking, and embedding generation.
+• Prompt Engineering: Design and iterate on system prompt to guide LLM behavior for specific business logic.
+• Code Quality: Write clean, modular code with clear README documentation (setup, usage, trade-offs).
+• Testing: Apply debugging and unit testing</p>
+<p>Technical Requirements:</p>
+<p>• Frontend: React, basic TailwindCSS, understanding of SSE (Server-Sent Events) for streaming text.
+• Backend: Python, FastAPI, REST API principles.
+• AI/ML Concepts: Understanding of Embeddings (Vectorization), basic Prompt Engineering, and how to use Vector Stores (e.g., Chroma/Pinecone).
+• Tools: Git, Postman, Basic Docker.
+• Japanese language proficiency is must N1, N2, N3 &amp; N4 (last preference)</p>
+<hr />
+<h2 id="45-prodocai"><a id="45-prodoc-ai"></a>45. Prodoc.Ai</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Technical Support Intern</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-44">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Customer/Technical Support</li>
+<li><strong>Job Profile CTC</strong>: ₹ 500000 - ₹ 700000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-44">📄 Job Description &amp; Drive Details</h3>
+<p>Internship Opportunity for the position of Implementation Engineer Technical Support Intern with your students.</p>
+<p>The role is part of our Technical Implementation &amp; Support Team and is suitable for students/passed-out candidates from BCA and B.Tech/B.E. backgrounds who are interested in APIs, software integrations, troubleshooting, scripting, and technical support.</p>
+<p>Internship Details:</p>
+<p>• Position: Implementation Engineer Technical Support Intern
+• Duration: 4 Months
+• Work Mode: On-site
+• Working Days: 5 Days a Week (WFO)
+• Stipend: 18,000 25,000 per month
+• Eligibility: BCA (Pursuing/Completed), B.Tech/B.E. (Pursuing/Completed)
+• PPO: Pre-Placement Offer opportunity based on internship performance and business requirements. CTC Post Internship: 5 7 LPA</p>
+<p>Please find the detailed Job Description attached for your reference.</p>
+<h3 id="-attached-documents-click-to-open-30">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Implementation_Engineer_Technical_Support_Intern_JD.pdf">Implementation_Engineer_Technical_Support_Intern_JD.pdf</a></li>
+</ul>
+<hr />
+<h2 id="46-axcessio"><a id="46-axcess-io"></a>46. axcess.io</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Cloud Developers</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-45">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 500000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-45">📄 Job Description &amp; Drive Details</h3>
+<p>About Axcess.io</p>
+<p>Axcess.io is an AWS Premier Tier Services Partner and a leading cloud-native consulting company specializing in cloud consulting and digital transformation services. We help organizations accelerate their cloud adoption journey by delivering secure, scalable, and high-performance solutions tailored to their business needs.</p>
+<p>With expertise in Cloud Transformation, Cloud Migration, DevOps, Application Modernization, Data Engineering, AI/ML, Generative AI, Kubernetes, and Managed Cloud Services, Axcess.io has successfully partnered with organizations across diverse industries to design, migrate, modernize, manage, and optimize their cloud infrastructure.</p>
+<p>Headquartered in Bengaluru, India, with a growing global presence, Axcess.io is backed by a team of AWS-certified professionals and follows ISO 27001-certified practices, enabling us to deliver innovative, secure, and reliable cloud solutions to our customers.</p>
+<p>As discussed over the call, we are currently hiring Cloud Developers for our organization. We would like to invite eligible candidates to apply for the same. Also, I am attaching the form link below. Kindly share the form with the interested candidates.</p>
+<p>The date and other relevant details will be shared with the candidates as well as with you once I have the final shortlisted candidates after the initial screening/telephonic round.</p>
+<p>I will keep you updated accordingly.</p>
+<p>Important Details:</p>
+<p>• Selection Process: 3 Interview Rounds
+• CTC: Up to 5 LPA</p>
+<h3 id="-attached-documents-click-to-open-31">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Cloud%20Developer-%20JD.pdf">Cloud Developer- JD.pdf</a></li>
+</ul>
+<hr />
+<h2 id="47-xinquiry-leads-software-private-limited"><a id="47-xinquiry-leads-software-private-limited"></a>47. Xinquiry Leads Software Private Limited</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>React Role</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore/Delhi</code></li>
+</ul>
+<h3 id="-opening-overview-46">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering</li>
+<li><strong>Job Profile CTC</strong>: ₹ 400000 - ₹ 600000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-46">📄 Job Description &amp; Drive Details</h3>
+<p><strong>Stipend -</strong></p>
+<p>10,000 30,000 per month</p>
+<p>Full-time Package (PPO) 4 6 LPA</p>
+<p>We request students to create resumes in the attached format only better shortlisting and selection rates:</p>
+<h3 id="-attached-documents-click-to-open-32">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>🖼️ <a href="./jd/Resume%20format.png">Resume format.png</a></li>
+</ul>
+<hr />
+<h2 id="48-orionedgeai"><a id="48-orionedge-ai"></a>48. OrionEdge.AI</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Developer role</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bengaluru- HSR Layout</code></li>
+</ul>
+<h3 id="-opening-overview-47">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 650000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-47">📄 Job Description &amp; Drive Details</h3>
+<p>I am looking to place some fresh BE graduates for our project on AI deployment. Below is the JD for this role, will you be able to help me with the right candidates here?</p>
+<p>Orion Edge specializes in high-performance Vision Analytics and Intelligent Systems. We focus on transitioning deep learning research into real-world applications. Our solutions are deployed on bare-metal servers and edge devices to solve complex urban challenges.</p>
+<p>The Role</p>
+<p>We are looking for a Computer Vision Intern to join our development team. In this role, you will work on the full ML lifecyclefrom dataset curation and image processing to deploying optimized inference engines. This position requires a deployment-oriented mindset and the flexibility to travel for on-site project implementation and testing.</p>
+<p><strong>Key Responsibilities</strong></p>
+<p>Model Development: Support the design and training of architectures including CNNs, RNNs, and VLLMs for Object Detection and Behavior Analytics.</p>
+<p>Pipeline Management: Assist in building end-to-end pipelines, including image processing, data augmentation, and inference logic.</p>
+<p>Tools &amp; Dashboards: Develop internal tools and data visualizations using Streamlit or similar frameworks.</p>
+<p>Field Deployment: Participate in on-site system calibration and testing on edge hardware across various locations.</p>
+<p>Technical Requirements</p>
+<p>Proficiency in Python and Strong coding skills with a focus on PyTorch.</p>
+<p>Solid understanding of CNNs, RNNs, and fundamental Image Processing techniques.</p>
+<p>Experience or familiarity with NVIDIA-based compute environments.</p>
+<p>Comfortable working within Ubuntu environments and managing remote servers via CLI.</p>
+<p>Nice to Have</p>
+<p>Familiarity with Docker for containerized deployment.</p>
+<p>Basic understanding of VLLMs or AI Agent orchestration.</p>
+<p>Experience with version control (Git) in a collaborative environment.</p>
+<p>Prior exposure to ONNX or other model conversion formats.</p>
+<p>Who You Are</p>
+<p>We are looking for a practical, engineer-at-heart who understands that high-quality data is just as critical as model architecture. You are an AI-augmented developer who is a master at leveraging LLMs and modern AI tools to accelerate your workflow, debugging, and overall productivity. Rather than focusing on writing the fewest lines of code, you prioritize building functional, robust, and maintainable systems. You thrive in agile environments with short development cycles and are comfortable with the physical aspects of the job, including traveling to various Indian cities for hands-on field testing and deployment.</p>
+<p>Perks</p>
+<p>Practical experience with production-grade Edge AI systems.</p>
+<p>Mentorship from experienced AI/ML engineers.</p>
+<p>Internship Certificate and Letter of Recommendation.</p>
+<p>Potential for transition to a full-time position based on performance.</p>
+<p>Internship Details</p>
+<p>Duration: 6 months (full-time internship)</p>
+<p>Compensation: Paid internship (competitive stipend)</p>
+<p>Full-Time Opportunity: Offered based on performance</p>
+<p>Role: Computer Vision Intern</p>
+<p>• Eligible Branches: BE / B.Tech (CSE, Data Science &amp; AI, AI/ML, or related streams)
+• Academic Eligibility: Minimum 60% / 6.5 CGPA aggregate with no active backlogs
+• Internship Duration &amp; Stipend: 6-9 Months duration with a stipend of 25000-30000
+• CTC / Full-Time Package: 6.5 LPA (upon successful completion of the internship and conversion to a full-time role)
+• Work Location: Bengaluru- HSR Layout</p>
+<hr />
+<h2 id="49-falabella-india"><a id="49-falabella-india"></a>49. Falabella India</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Software Engineer Intern</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bengaluru</code></li>
+</ul>
+<h3 id="-opening-overview-48">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 1000000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-48">📄 Job Description &amp; Drive Details</h3>
+<p>Greetings from Falabella India!</p>
+<p>We are pleased to announce our Software Engineer Internship Program 2026 and would like to invite your institution to share profiles of eligible students who are interested in pursuing a career in technology, data, and AI.</p>
+<p>Falabella India is the technology and innovation centre of the Falabella Group, one of Latin America's largest retail conglomerates. Through this internship program, students will have the opportunity to work on real-world projects across engineering, data, and AI domains while collaborating with experienced professionals.</p>
+<p>Internship Details</p>
+<p>• Position: Software Engineer Intern
+• Location: Bengaluru, India
+• Duration: 6 Months
+• Tracks Available:
+• AI/ML Engineering
+• Data Science
+• Data Engineering
+• Full Stack Engineering
+• Backend Engineering</p>
+<p>Eligibility</p>
+<p>• Final-year students or recent graduates from Computer Science, Information Technology, Data Science, AI/ML, Mathematics, Statistics, Electronics, or related disciplines.
+• Strong programming fundamentals and hands-on project experience.
+• Minimum academic performance as specified in the attached Job Description.
+• We focus on candidates who meet the following criteria:
+• Computer Science background only
+• Candidates should be informed that the internship stipend is 35,000 per month
+• Full-time conversion will be performance-based, with a compensation range of 10 to 12 LPA</p>
+<h3 id="-attached-documents-click-to-open-33">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Interns%20JD%20-%202026.pdf">Interns JD - 2026.pdf</a></li>
+</ul>
+<hr />
+<h2 id="50-ampcus-cyber-india-private-limited"><a id="50-ampcus-cyber-india-private-limited"></a>50. Ampcus Cyber India Private Limited</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Intern</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-49">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Cyber Security</li>
+<li><strong>Job Profile CTC</strong>: ₹ 600000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-49">📄 Job Description &amp; Drive Details</h3>
+<ol>
+<li><p>Eligibility Criteria: Final-year B.E./B.Tech students (Computer Science, IT, Electronics, or related field). Minimum aggregate percentage required: 50% above.</p>
+</li>
+<li><p>CTC Details: The base CTC ranges from 5 LPA. Depending on the candidate's skill set, this may also include a variable component of up to 1 lakh added to the fixed pay.</p>
+</li>
+<li><p>Internship Duration: Candidates who clear the initial technical interview will be inducted into a 3-month internship program, during which they will be evaluated through various assessments and viva sessions.</p>
+</li>
+<li><p>Stipend during Internship:The stipend during the internship is typically in the range of Rs. 10,000-12,000 per month, depending on the role and candidate profile.</p>
+</li>
+<li><p>Post-Internship Process: At the end of the internship, a final viva and HR interview will be conducted, based on which eligible candidates will be offered a Pre-Placement Offer (PPO).</p>
+</li>
+</ol>
+<hr />
+<h2 id="51-infosys"><a id="51-infosys"></a>51. Infosys</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Systems Engineer (Trainee)</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>PAN INDIA</code></li>
+<li><strong>Official Website</strong>: <a href="http://infosys.com">http://infosys.com</a></li>
+</ul>
+<h3 id="-opening-overview-50">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: Mass Recruiter</li>
+<li><strong>Job Functions</strong>: Engineering</li>
+<li><strong>Job Profile CTC</strong>: ₹ 360000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-50">📄 Job Description &amp; Drive Details</h3>
+<p>Infosys is a global leader in next-generation digital services and consulting. Over 320,000 of our people work to amplify human potential and create the next opportunity for people, businesses and communities. We enable clients in 59 countries to navigate their digital transformation. With over four decades of experience in managing the systems and workings of global enterprises, we expertly steer clients, as they navigate their digital transformation powered by cloud and AI. We enable them with an AI-first core, empower the business with agile digital at scale and drive continuous improvement with always-on learning through the transfer of digital skills, expertise, and ideas from our innovation ecosystem. We are deeply committed to being a well-governed, environmentally sustainable organization where diverse talent thrives in an inclusive workplace.</p>
+<p>As we initiate campus recruitment for the 2027 batch, we look forward to partnering with your institution for the Infosys Campus Recruitment Program 2026-27. We are seeking enthusiastic students to join our organization as a Systems Engineer (Trainee), offering a compensation package of 3.6 LPA.</p>
+<p>Our recruitment program will be conducted in person on your campus. The evaluation is designed to identify candidates who align with our AI-driven vision by assessing both technical and behavioural competencies through a comprehensive selection process</p>
+<p>We will then reach out to all nominated candidates via email, inviting them to complete the Infosys Application Form. This is a mandatory step to participate in the recruitment process. Invitations for the evaluation process will be sent based on the details provided in the application form.</p>
+<p>Please note: Kindly provide personal email addresses only, as college domain email addresses will not be accepted for the recruitment process. Our system-driven procedures require strict adherence to these guidelines, and we are unable to accommodate changes or additions to the nomination list after the deadline.</p>
+<h3 id="-attached-documents-click-to-open-34">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/Assessment%20Guidelines%20-%20Campus%20Hiring.pdf">Assessment Guidelines - Campus Hiring.pdf</a></li>
+<li>📕 <a href="./jd/Infosys%20Campus%20Recruitment%20Program_Elgibility%20Criteria.pdf">Infosys Campus Recruitment Program_Elgibility Criteria.pdf</a></li>
+<li>📕 <a href="./jd/IMPORTANT%20INSTRUCTIONS%20FOR%20CANDIDATES%20%281%29.pdf">IMPORTANT INSTRUCTIONS FOR CANDIDATES (1).pdf</a></li>
+</ul>
+<hr />
+<h2 id="52-target-india"><a id="52-target-india"></a>52. Target India</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Apprentice Tech</code></li>
+<li><strong>Position Type</strong>: <code>Apprenticeship</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-51">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering</li>
+<li><strong>Job Profile CTC</strong>: ₹ 900000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-51">📄 Job Description &amp; Drive Details</h3>
+<p>We are delighted to connect with you to share a learning and career development opportunity for your students. We are currently accepting applications for the Apprenticeship Program designed to nurture emerging talent and empower students from diverse academic backgrounds.</p>
+<p>Target in India (TII) is an integrated headquarters of Minneapolis-based Target Corporation. TII helps deliver an elevated shopping experience for guests through tech-powered, innovative retail solutions and nurtures a culture where teams learn and experiment, and communities thrive.</p>
+<p>We invite interested students (2027 pass out batch only) to apply using this registration link by 25th Sep 2026.</p>
+<p>Registration Link: Target in India Apprenticeship Program - Jan 2027 - Registration Fill in form</p>
+<p>About the Apprenticeship Program</p>
+<p>The Target Apprenticeship Program offers students a unique opportunity to work alongside industry professionals, build essential skills, and gain real-world experience to help shape their career journey. We welcome and encourage applications from candidates across all backgrounds and identities, including persons with disabilities and LGBTQIA+ individuals</p>
+<p>Program Highlights</p>
+<p>Hands-on Learning: Apprentices will engage in meaningful projects that complement their academic learning.</p>
+<p>Mentorship: Learn from experienced professionals and industry experts.</p>
+<p>Skill Development: Gain practical skills through training sessions and workshops.</p>
+<p>Networking Opportunities: Collaborate and connect with peers and teams across functions.</p>
+<p>Mode: Hybrid (Base location Bangalore)</p>
+<p>Duration: 6 months to 1 year</p>
+<p><strong>Stipend: 15,000 30,000 per month</strong></p>
+<p><strong>Eligibility Criteria</strong></p>
+<p>BDES/MDES/BVA/MVA/BVOC/MVOC/BSc - Animation/Digital media/graphics/Communication design/UI/UX/ fashion communication etc</p>
+<p>BArch/M.Arch/BPlan</p>
+<p>Graduation Year: 2026/2027</p>
+<p>Minimum Score: 65% aggregate (with no active backlogs)</p>
+<p><strong>Selection Process:</strong></p>
+<p>Profile Screening: Applications will be reviewed based on eligibility. Shortlisted students will be notified via email.</p>
+<p>Online Assessment: This is a proctored test which candidates can take from their homes, with an audio, video &amp; location enabled device and good internet connectivity. Shortlisted candidates will receive details regarding the test schedule in advance.</p>
+<p>Interview: Students who clear the assessment will be invited for an in-person interview.</p>
+<p>We invite interested students (2026/2027 pass out batch only) to apply using this registration link by 25th Sep 2026.</p>
+<p>Registration Link: Target in India Apprenticeship Program - Jan 2027 - Registration Fill in form</p>
+<hr />
+<h2 id="53-agratas--a-tata-enterprose-"><a id="53-agratas-a-tata-enterprose"></a>53. Agratas ( A TATA Enterprose )</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Intern</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bengaluru</code></li>
+</ul>
+<h3 id="-opening-overview-52">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 1100000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-52">📄 Job Description &amp; Drive Details</h3>
+<p>Please find below the requested inputs and clarifications regarding the IT Internship opportunity:</p>
+<ol>
+<li>Required Skills &amp; Qualifications</li>
+</ol>
+<p>• Currently pursuing or recently completed a degree in Information Technology, Computer Science, and Computer Engineering.
+• Basic understanding of computer hardware, operating systems, and networking.
+• Familiarity with Windows and Microsoft Office/Google Workspace.
+• Basic troubleshooting and problem-solving skills.
+• Good communication and interpersonal skills.
+• Ability to learn new technologies quickly.
+• Strong attention to detail and willingness to work as part of a team.</p>
+<ol start="2">
+<li>Internship Stipend</li>
+</ol>
+<p>The internship will be stipend-based. The stipend will depend on the tier of the college as per NIRF rankings.</p>
+<p>• Tier 2: 40,000 per month
+• Tier 3: 25,000 per month</p>
+<ol start="3">
+<li>Internship Structure</li>
+</ol>
+<p>For now, the selected candidates will be assigned to different segments within the IT function. They will be provided with projects and practical assignments based on the respective IT segment, allowing them to gain hands-on experience.</p>
+<ol start="4">
+<li>PPO / Full-Time Opportunity</li>
+</ol>
+<p>The decision will be based on the individual's performance and the availability of relevant openings, if converted there CTC would be 11 LPA</p>
+<ol start="4">
+<li>Internship Structure</li>
+</ol>
+<p>For now, the selected candidates will be assigned to different segments within the IT function. They will be provided with projects and practical assignments based on the respective IT segment, allowing them to gain hands-on experience.</p>
+<p>Location: Agratas- Cirrus 2nd Floor, Prestige Tech Cloud, Navarathna Agrahara, behind Presidency Hotel, Bengaluru, Karnataka 562110. Link : <a href="https://g.co/kgs/YWteGK9">https://g.co/kgs/YWteGK9</a></p>
+<p>Company Website :<a href="https://agratas.net/">https://agratas.net/</a></p>
+<p>LinkedIn Profile : <a href="https://www.linkedin.com/company/agratas/mycompany/">https://www.linkedin.com/company/agratas/mycompany/</a></p>
+<hr />
+<h2 id="54-virtusa"><a id="54-virtusa"></a>54. Virtusa</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Regular coders,Power coders</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-53">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Information Technology</li>
+<li><strong>Job Profile CTC</strong>: ₹ 500000 - ₹ 650000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-53">📄 Job Description &amp; Drive Details</h3>
+<p><strong>Eligibility:</strong></p>
+<p>• Minimum 65% aggregate across 10th, 12th, and degree
+• Streams: BE, BTech (CSE/IT/ Computer science related branches )
+• Students must have no active backlogs.</p>
+<p>Please note that the Level 1 assessment must be conducted on the college premises, and the college must ensure all students appear for the assessment on-site without any malpractice.</p>
+<p>Post Level 1, eligible students will be required to complete a communication assessment(SpeechX) within one day. For your reference, detailed information about the assessment and eligibility criteria is included in the attached PPT.</p>
+<h3 id="-attached-documents-click-to-open-35">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📙 <a href="./jd/COE%20Campus-2027%20%281%29.pptx">COE Campus-2027 (1).pptx</a></li>
+</ul>
+<hr />
+<h2 id="55-ltm"><a id="55-ltm"></a>55. LTM</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Graduate Engineer Trainee</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>PAN INDIA</code></li>
+</ul>
+<h3 id="-opening-overview-54">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: Mass Recruiter</li>
+<li><strong>Job Functions</strong>: Engineering</li>
+<li><strong>Job Profile CTC</strong>: ₹ 405233 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-54">📄 Job Description &amp; Drive Details</h3>
+<p>Greetings from the LTM Early Careers Team!</p>
+<p>LTM is an AI-centric global technology services company and the Business Creativity partner to the worlds largest and most disruptive enterprises. We bring human insights and intelligent systems together to help clients create greater value at the intersection of technology and domain expertise. Our capabilities span integrated operations, transformation, and business AI enabling new ways of working, new productivity paradigms, and new roads to value. Together with over 87,000 employees across 40 countries and our global network of partners, LTM a Larsen &amp; Toubro company owns business outcomes for our clients, helping them not just outperform the market, but to Outcreate it.</p>
+<p>In line to this purpose, please find below the eligibility criteria for 2027 Batch Hiring. Join us as we build the future with engineers of tomorrow.</p>
+<p><strong>Eligibility Criteria</strong></p>
+<p>2027 Batch of B.E/ BTech/ ME/ MTech (all branches of engineering) /MCA/ M.Sc.-5 Yrs integrated CS &amp; IT branches only (all education in full-time/regular courses)</p>
+<p>Consistent academic records of 65% in 10th, 12th, Diploma (as applicable), UG and PG courses (aggregate of all semesters &amp; subjects)</p>
+<p>Appropriate CGPA to percentage conversion to be considered as per the respective university norms. The scores of the main or improvement exam would be considered as final.</p>
+<p>For candidates who have pursued both HSC and Diploma, marks scored in the Diploma course will be considered.</p>
+<p>Initial results (% scores) declared would be considered for students awaiting re-evaluation results.</p>
+<p>At the time of recruitment process, there must be no standing arrears in current education.</p>
+<p>Not more than 2 years academic gap allowed. (SSC/HSC/Diploma/UG/PG)</p>
+<p>No Service Agreement / Bond</p>
+<p>As a future IT professional, flexibility towards working from any of LTMs development centres across the country, flexible work durations/time, training and working in multiple emerging skills &amp; domain is mandatory.</p>
+<p>Should be an Indian national</p>
+<p>Designation: Graduate Engineer Trainee</p>
+<p>Compensation: INR 4,05,233 per annum</p>
+<h3 id="-attached-documents-click-to-open-36">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📊 <a href="./jd/LTM%20Candidate%20Information%20Sheet%202027%20Batch.xlsx">LTM Candidate Information Sheet 2027 Batch.xlsx</a></li>
+</ul>
+<hr />
+<h2 id="56-quick-hyre"><a id="56-quick-hyre"></a>56. QUICK HYRE</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>AI/ML &amp; Robotics Data Annotator</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Work From Home</code></li>
+</ul>
+<h3 id="-opening-overview-55">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 40000 per Month</li>
+</ul>
+<h3 id="-job-description--drive-details-55">📄 Job Description &amp; Drive Details</h3>
+<p>Opportunity Highlights</p>
+<p>Work Mode: 100% Work From Home</p>
+<p>Monthly In-Hand: 40,000 70,000</p>
+<p><strong>Eligibility: Graduates &amp; Postgraduates</strong></p>
+<p>Technical + Non-Technical: Eligible</p>
+<p>Final Application Link:</p>
+<p><a href="https://quickhyre.ai/jobs/9b1702d4-82da-4789-893b-e8138419615d">https://quickhyre.ai/jobs/9b1702d4-82da-4789-893b-e8138419615d</a></p>
+<hr />
+<h2 id="57-akshara-enterprises"><a id="57-akshara-enterprises"></a>57. Akshara Enterprises</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Business Analytics and Data Analytics</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+<li><strong>Official Website</strong>: <a href="https://www.linkedin.com/company/akshara-enterprises-ind/">https://www.linkedin.com/company/akshara-enterprises-ind/</a></li>
+</ul>
+<h3 id="-opening-overview-56">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is less than 8 LPA</li>
+<li><strong>Job Functions</strong>: Data &amp; Analytics</li>
+<li><strong>Job Profile CTC</strong>: ₹ 540000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-56">📄 Job Description &amp; Drive Details</h3>
+<p>We are pleased to inform you about an exciting 6-month internship opportunity available for students who are looking to gain practical industry exposure and develop their skills in Business Analytics and Data Analytics.</p>
+<p>We would appreciate it if you could circulate this opportunity among eligible students and interested candidates at your institution.</p>
+<p>Internship Opportunities</p>
+<p>Available Roles:</p>
+<p>• Business Analyst Intern
+• Data Analyst Intern</p>
+<p>Internship Duration: 6 Months</p>
+<p><strong>Stipend: 7500 per month</strong></p>
+<p>Work Location: 48, Church St, Haridevpur, Shanthala Nagar, Ashok Nagar, Bengaluru, Karnataka 560001</p>
+<p>Mode: Work from office</p>
+<p>Full-Time Opportunity: Yes, based on performance during the internship</p>
+<p>The internship is designed to provide students with hands-on exposure to real-world business and data-related projects. During the internship, students will have the opportunity to work closely with professional teams, understand industry workflows, contribute to live projects, and develop practical skills beyond their academic curriculum.</p>
+<p>Pre-Placement Opportunity (PPO)</p>
+<p>Students demonstrating strong performance, professionalism, learning ability, and contribution throughout the internship may be considered for a Pre-Placement Offer (PPO) with the organization.</p>
+<p>The PPO will be based on the student's overall performance and evaluation during the internship period.</p>
+<p>About Akshara Enterprises</p>
+<p>Akshara Enterprises is a growing organization providing technology, recruitment, and business solutions to companies across different industries.</p>
+<p>Our key service verticals include:</p>
+<ol>
+<li>Talenty Consultancy HR &amp; Recruitment Services</li>
+</ol>
+<p>Talenty Consultancy focuses on end-to-end recruitment and talent acquisition solutions, helping organizations identify, evaluate, and hire suitable candidates across various functions and experience levels. Our services support companies in building strong and capable teams while streamlining their hiring processes.</p>
+<ol start="2">
+<li>AI Checkpoint Technology &amp; Website Solutions</li>
+</ol>
+<p>AI Checkpoint focuses on providing technology-driven digital solutions for businesses, including website development and related digital solutions. We work with organizations to build professional, functional, and business-oriented web platforms that support their digital presence and business requirements.</p>
+<p>Through these business verticals, Akshara Enterprises provides students with an opportunity to gain exposure to a professional, technology-driven, and business-oriented working environment.</p>
+<p>Application Process</p>
+<p>Interested and eligible students can register for the internship opportunity using the Google Form below:</p>
+<p>Company link:</p>
+<p>d/e/1FAIpQLSc8lg2CvKCGbvVVd9DFAqle3UDxVAlcL9Ly2DV6dJxeTdbxWg/viewform?usp=dialog</p>
+<p>Business Analyst Intern</p>
+<p>Role: Business Analyst Intern</p>
+<p>Internship Duration: 6 Months</p>
+<p><strong>Stipend: 7,500 per month</strong></p>
+<p>PPO: Available after successful completion of the 6-month internship</p>
+<p>Full-Time CTC: 5.4 LPA, based on the candidate's performance during the</p>
+<p>internship</p>
+<p>About the Company</p>
+<p>Akshara Enterprises is a forward-thinking business management company offering</p>
+<p>comprehensive end-to-end solutions for brands across sectors. From production and logistics</p>
+<p>to scaling, marketing, and sales, the company manages every operational aspect to help</p>
+<p>businesses grow efficiently and sustainably.</p>
+<p>Akshara Enterprises ensures seamless integration and execution at every stage of the business</p>
+<p>lifecycle, with a mission to build, streamline, and scale operations for ambitious brands.</p>
+<p><strong>About the Role</strong></p>
+<p>The Business Analyst Intern will play a key role in monitoring business operations and improving</p>
+<p>team performance. This internship offers hands-on experience in auditing employee calls,</p>
+<p>evaluating performance, preparing reports, and supporting business development activities</p>
+<p>through client calling and follow-ups. It is an excellent opportunity for candidates looking to</p>
+<p>build analytical, communication, and business management skills.</p>
+<p><strong>Key Responsibilities</strong></p>
+<p>Audit employee calls and evaluate call quality based on company standards.</p>
+<p>Monitor employee performance and prepare regular performance reports.</p>
+<p>Identify improvement areas and share feedback with the reporting manager.</p>
+<p>Make outbound calls to clients and prospects for business development activities.</p>
+<p>Maintain call records and update reports accurately.</p>
+<p>Analyze performance data and assist in improving operational efficiency.</p>
+<p>Coordinate with internal teams to ensure smooth execution of daily tasks.</p>
+<p>Prepare basic business reports and present observations to the management team.</p>
+<p>Who Can Apply</p>
+<p>Fresh graduates or final-year students from Business Administration, Commerce,</p>
+<p>Management, Economics, or related fields.</p>
+<p>Strong verbal and written communication skills.</p>
+<p>Good analytical and problem-solving abilities.</p>
+<p>Comfortable making and auditing calls.</p>
+<p>Basic knowledge of MS Excel and Google Sheets is preferred.</p>
+<p>Ability to multitask and take ownership of responsibilities.</p>
+<p>Why Join Us?</p>
+<p>Gain practical exposure to business analysis, operations, and client communication.</p>
+<p>Learn directly from experienced professionals in a fast-paced business environment.</p>
+<p>Develop analytical, reporting, and communication skills.</p>
+<p>Opportunity for career progression into Business Analyst, Operations, or Management</p>
+<p>roles based on performance.</p>
+<p>PPO Opportunity</p>
+<p>A Pre-Placement Offer (PPO) will be available after successful completion of the 6-month</p>
+<p>internship.</p>
+<p>Candidates will be evaluated based on their overall performance during the internship,</p>
+<p>including work quality, learning ability, analytical skills, communication, and contribution to the</p>
+<p>organization.</p>
+<p>Selected candidates will receive a full-time offer with a CTC 5.4</p>
+<p>LPA, depending on their performance during the internship.</p>
+<p>Website: <a href="https://aksharaenterprises.info/">https://aksharaenterprises.info/</a></p>
+<p>LinkedIn: <a href="https://www.linkedin.com/company/akshara-enterprises-ind/">https://www.linkedin.com/company/akshara-enterprises-ind/</a></p>
+<p>Data Analyst Intern</p>
+<p>Company: Akshara Enterprises</p>
+<p>Location: Bengaluru</p>
+<p>Internship Duration: 6 Months</p>
+<p><strong>Stipend: 7,500/month</strong></p>
+<p>Full-Time PPO: Yes, based on performance during the internship</p>
+<p>Full-Time CTC: 5.4 LPA</p>
+<p>About Akshara Enterprises</p>
+<p>Akshara Enterprises is a Bengaluru-based business management and operations consulting</p>
+<p>company that works with enterprises, startups, and SMBs to streamline business operations,</p>
+<p>improve workflows, coordinate teams, and support business growth. The company provides</p>
+<p>services including day-to-day operations, business strategy, process optimization, and</p>
+<p>management support.</p>
+<p>The company operates across locations including Bengaluru, Hyderabad, Chennai &amp; Kochi.</p>
+<p>Visit Akshara Enterprises</p>
+<p>About the Internship</p>
+<p>We are looking for a Data Analyst Intern who is interested in working with real-world business</p>
+<p>data and developing practical data analytics skills.</p>
+<p>During the 6-month internship, the intern will work with data generated from multiple business</p>
+<p>activities and clients. The role will involve collecting, cleaning, organizing, analyzing, and</p>
+<p>maintaining business and lead-related data.</p>
+<p>The intern will be expected to use tools such as Excel, SQL, Python, Power BI, and other data-</p>
+<p>analysis techniques to identify meaningful insights from the data and help the team make</p>
+<p>better business decisions.</p>
+<p><strong>Key Responsibilities</strong></p>
+<p>Collect, organize, clean, and maintain large volumes of business and lead data.</p>
+<p>Manage and update datasets received from different business activities and client</p>
+<p>requirements.</p>
+<p>Analyze lead data and categorize leads based on their status, such as positive leads,</p>
+<p>interested leads, follow-up leads, converted leads, and non-converted leads.</p>
+<p>Track lead movement through different stages of the business/conversion funnel.</p>
+<p>Identify patterns, trends, and key insights from business and customer data.</p>
+<p>Use Excel for data cleaning, filtering, sorting, pivot tables, lookup functions, reporting,</p>
+<p>and analysis.</p>
+<p>Use SQL to query, extract, filter, and analyze data from databases.</p>
+<p>Use Python for data cleaning, transformation, analysis, and basic automation.</p>
+<p>Create dashboards and reports using Power BI to present business and lead</p>
+<p>performance.</p>
+<p>Perform data validation and ensure accuracy and consistency across datasets.</p>
+<p>Prepare regular reports on lead performance, conversion rates, business</p>
+<p>performance, and other relevant KPIs.</p>
+<p>Identify duplicate, incomplete, or inconsistent data and maintain data quality.</p>
+<p>Work with the team to understand business requirements and convert them into</p>
+<p>meaningful data reports.</p>
+<p>Support management with data-driven insights and analysis for business decision-</p>
+<p>making.</p>
+<p>Maintain proper documentation of datasets, reports, processes, and analytical findings.</p>
+<p>Technical Skills</p>
+<p>Mandatory / Preferred:</p>
+<p>MS Excel Pivot Tables, VLOOKUP/XLOOKUP, INDEX-MATCH, formulas, data cleaning</p>
+<p>SQL SELECT, WHERE, JOIN, GROUP BY, aggregate functions, subqueries</p>
+<p>Python Pandas, NumPy, basic data manipulation and analysis</p>
+<p>Power BI dashboards, visualizations, data modeling and basic DAX</p>
+<p>Data Cleaning &amp; Data Validation</p>
+<p>Data Visualization</p>
+<p>Basic Statistics</p>
+<p>KPI &amp; Business Metrics Analysis</p>
+<p>Basic understanding of databases</p>
+<p>Analytical and problem-solving skills</p>
+<p>What You Will Gain</p>
+<p>Hands-on experience working with real business and lead data</p>
+<p>Practical exposure to Excel, SQL, Python and Power BI</p>
+<p>Experience in data cleaning, transformation, analysis, and visualization</p>
+<p>Understanding of lead management and conversion analytics</p>
+<p>Exposure to business operations and decision-making</p>
+<p>Experience creating reports and dashboards used for business analysis</p>
+<p>Opportunity to work on real-world projects rather than only theoretical assignments</p>
+<p>Eligibility</p>
+<p>Students/recent graduates from B.Tech/B.E, BCA, MCA, or related</p>
+<p>technical/analytical backgrounds</p>
+<p>Candidates with a strong interest in Data Analytics and Business Intelligence</p>
+<p>Basic knowledge of Excel, SQL and Python</p>
+<p>Good analytical and problem-solving abilities</p>
+<p>Strong attention to detail</p>
+<p>Ability to work with large datasets and maintain data accuracy</p>
+<p>Candidates who can commit to the complete 6-month internship are preferred</p>
+<p>PPO Opportunity</p>
+<p>Upon successful completion of the 6-month internship, candidates will be evaluated based on</p>
+<p>their performance, technical skills, learning ability, work quality, analytical capabilities,</p>
+<p>and overall contribution.</p>
+<p>High-performing interns may receive a Pre-Placement Offer (PPO) for a full-time Data Analyst</p>
+<p>position.</p>
+<p>Full-Time CTC after PPO: 5.4 LPA</p>
+<p>Important: PPO is performance-based and is not guaranteed solely on completion of the</p>
+<p>internship.</p>
+<hr />
+<h2 id="58-recruiterflow"><a id="58-recruiterflow"></a>58. Recruiterflow</h2>
+<ul>
+<li><strong>Target Role(s)</strong>: <code>Intern</code></li>
+<li><strong>Position Type</strong>: <code>Full Time</code></li>
+<li><strong>Job Location</strong>: <code>Bangalore</code></li>
+</ul>
+<h3 id="-opening-overview-57">📌 Opening Overview</h3>
+<ul>
+<li><strong>Category</strong>: CTC is Equal to or more than 8 LPA</li>
+<li><strong>Job Functions</strong>: Engineering - Web / Software</li>
+<li><strong>Job Profile CTC</strong>: ₹ 900000 per Annum</li>
+</ul>
+<h3 id="-job-description--drive-details-57">📄 Job Description &amp; Drive Details</h3>
+<p>Please find the requested details below:</p>
+<p>• Start Date of Internship: 4th January 2027
+• CTC Post Conversion: 9 LPA
+• Academic Eligibility Criteria:</p>
+<p>We would like to invite applications from B.E./B.Tech. and M.C.A. students with a minimum CGPA of 9.0+ throughout..</p>
+<p>Eligible branches:</p>
+<p>• Computer Science &amp; Engineering
+• Information Science &amp; Engineering
+• Artificial Intelligence &amp; Machine Learning
+• Artificial Intelligence &amp; Data Science
+• Computer Science &amp; Business Systems</p>
+<h3 id="-attached-documents-click-to-open-37">📎 Attached Documents (Click to Open)</h3>
+<ul>
+<li>📕 <a href="./jd/_Recruiterflow%20%E2%80%94%20Engineering%20Internship%20Program%202026.pdf">_Recruiterflow — Engineering Internship Program 2026.pdf</a></li>
+</ul>
+<hr />
+
+    
+    <script>
+        function updateTheme() {
+            const isVSCode = document.body.classList.contains('vscode-light') || 
+                             document.body.classList.contains('vscode-dark') || 
+                             document.body.classList.contains('vscode-high-contrast');
+            
+            let isLight;
+            if (isVSCode) {
+                isLight = document.body.classList.contains('vscode-light');
+            } else {
+                isLight = !window.matchMedia('(prefers-color-scheme: dark)').matches;
+            }
+            
+            const linkLight = document.getElementById('highlight-css-light');
+            const linkDark = document.getElementById('highlight-css-dark');
+            if (linkLight && linkDark) {
+                linkLight.disabled = !isLight;
+                linkDark.disabled = isLight;
+            }
+        }
+        
+        updateTheme();
+        
+        new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.attributeName === 'class') {
+                    updateTheme();
+                }
+            }
+        }).observe(document.body, { attributes: true });
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateTheme);
+    </script>
+    
+</body>
+</html>
